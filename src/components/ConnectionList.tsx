@@ -228,7 +228,7 @@ export default function ConnectionList({ connections, isLoading, onSync, onEdit,
                                             className={styles.iconSyncBtn}
                                             onClick={(e) => handleSync(e, conn.id)}
                                             disabled={syncingId === conn.id}
-                                            title="Sync Now"
+                                            title="Run Now"
                                         >
                                             {syncingId === conn.id ? '...' : '⚡'}
                                         </button>
@@ -277,9 +277,9 @@ export default function ConnectionList({ connections, isLoading, onSync, onEdit,
                                         className={styles.headerSyncBtn}
                                         onClick={(e) => handleSync(e, conn.id)}
                                         disabled={syncingId === conn.id}
-                                        title="Sync Now"
+                                        title="Run Now"
                                     >
-                                        {syncingId === conn.id ? 'Syncing...' : '⚡ Sync'}
+                                        {syncingId === conn.id ? 'Running...' : '⚡ Run Now'}
                                     </button>
                                     <StatusBadge status={conn.status} />
                                 </div>

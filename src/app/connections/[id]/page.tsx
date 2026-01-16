@@ -107,7 +107,7 @@ export default function ConnectionDetailPage() {
     };
 
     return (
-        <div className="container" style={{ maxWidth: '800px', margin: '0 auto', paddingTop: '2rem' }}>
+        <div className="container" style={{ maxWidth: '75%', margin: '0 auto', paddingTop: '2rem' }}>
             <div style={{ marginBottom: '1.5rem' }}>
                 <Link href="/" style={{ color: '#a3a3a3', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
                     ← Back to Dashboard
@@ -121,7 +121,7 @@ export default function ConnectionDetailPage() {
                 padding: '2rem',
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
             }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
                     <div>
                         <h1 style={{ fontSize: '1.75rem', fontWeight: 600, color: '#fff', marginBottom: '0.5rem' }}>{connection.name}</h1>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -131,9 +131,135 @@ export default function ConnectionDetailPage() {
                             </span>
                         </div>
                     </div>
+
+                    {/* Toolbar */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <button
+                            onClick={handleSync}
+                            disabled={isSyncing}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                padding: '0.5rem 1rem',
+                                borderRadius: '6px',
+                                background: '#262626',
+                                color: '#e5e5e5',
+                                border: '1px solid #404040',
+                                fontWeight: 500,
+                                cursor: isSyncing ? 'not-allowed' : 'pointer',
+                                opacity: isSyncing ? 0.7 : 1,
+                                fontSize: '0.9rem'
+                            }}
+                        >
+                            {isSyncing ? 'Running...' : '▶ Run Now'}
+                        </button>
+
+                        {connection.status === 'ACTIVE' ? (
+                            <button
+                                onClick={() => handleUpdate({ status: 'PAUSED' })}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '6px',
+                                    background: 'transparent',
+                                    border: '1px solid #eab308',
+                                    color: '#eab308',
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem'
+                                }}
+                            >
+                                ⏸ Disable Schedule
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => handleUpdate({ status: 'ACTIVE' })}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '6px',
+                                    background: '#10b981',
+                                    color: '#fff',
+                                    border: 'none',
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem'
+                                }}
+                            >
+                                ▶ Enable Schedule
+                            </button>
+                        )}
+
+                        <button
+                            onClick={() => setIsPipelineBuilderOpen(true)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                padding: '0.5rem 1rem',
+                                borderRadius: '6px',
+                                background: '#262626',
+                                color: '#e5e5e5',
+                                border: '1px solid #404040',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                fontSize: '0.9rem'
+                            }}
+                        >
+                            ⚙️ Pipeline
+                        </button>
+
+                        <button
+                            onClick={() => setIsLogModalOpen(true)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                padding: '0.5rem 1rem',
+                                borderRadius: '6px',
+                                background: '#262626',
+                                color: '#e5e5e5',
+                                border: '1px solid #404040',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                fontSize: '0.9rem'
+                            }}
+                        >
+                            🕒 History
+                        </button>
+
+                        <button
+                            onClick={() => setIsEditModalOpen(true)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                padding: '0.5rem 1rem',
+                                borderRadius: '6px',
+                                background: '#262626',
+                                color: '#e5e5e5',
+                                border: '1px solid #404040',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                fontSize: '0.9rem'
+                            }}
+                        >
+                            ✎ Edit
+                        </button>
+
+                        <button
+                            onClick={() => setIsDeleteModalOpen(true)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                padding: '0.5rem 1rem',
+                                borderRadius: '6px',
+                                background: 'transparent',
+                                color: '#fca5a5',
+                                border: '1px solid #7f1d1d',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                fontSize: '0.9rem'
+                            }}
+                        >
+                            🗑 Delete
+                        </button>
+                    </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem', padding: '1.5rem', background: '#171717', borderRadius: '8px', border: '1px solid #262626' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '0', padding: '1.5rem', background: '#171717', borderRadius: '8px', border: '1px solid #262626' }}>
                     <div>
                         <div style={{ color: '#a3a3a3', fontSize: '0.85rem', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Type</div>
                         <div style={{ color: '#e5e5e5', fontWeight: 500 }}>{connection.type}</div>
@@ -167,129 +293,11 @@ export default function ConnectionDetailPage() {
                         </div>
                     )}
                 </div>
-
-                <div style={{ display: 'flex', gap: '1rem', borderTop: '1px solid #262626', paddingTop: '1.5rem' }}>
-                    <button
-                        onClick={handleSync}
-                        disabled={isSyncing}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '0.5rem',
-                            padding: '0.6rem 1.2rem',
-                            borderRadius: '6px',
-                            background: '#262626',
-                            color: '#e5e5e5',
-                            border: '1px solid #404040',
-                            fontWeight: 500,
-                            cursor: isSyncing ? 'not-allowed' : 'pointer',
-                            opacity: isSyncing ? 0.7 : 1
-                        }}
-                    >
-                        {isSyncing ? 'Running...' : '▶ Run'}
-                    </button>
-
-                    {connection.status === 'ACTIVE' ? (
-                        <button
-                            onClick={() => handleUpdate({ status: 'PAUSED' })}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                padding: '0.6rem 1.2rem',
-                                borderRadius: '6px',
-                                background: 'transparent',
-                                border: '1px solid #eab308',
-                                color: '#eab308',
-                                fontWeight: 500,
-                                cursor: 'pointer'
-                            }}
-                        >
-                            ⏸ Pause
-                        </button>
-                    ) : (
-                        <button
-                            onClick={() => handleUpdate({ status: 'ACTIVE' })}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                padding: '0.6rem 1.2rem',
-                                borderRadius: '6px',
-                                background: '#10b981',
-                                color: '#fff',
-                                border: 'none',
-                                fontWeight: 500,
-                                cursor: 'pointer'
-                            }}
-                        >
-                            ▶ Start
-                        </button>
-                    )}
-
-                    <button
-                        onClick={() => setIsPipelineBuilderOpen(true)}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '0.5rem',
-                            padding: '0.6rem 1.2rem',
-                            borderRadius: '6px',
-                            background: '#262626',
-                            color: '#e5e5e5',
-                            border: '1px solid #404040',
-                            fontWeight: 500,
-                            cursor: 'pointer'
-                        }}
-                    >
-                        ⚙️ Pipeline
-                    </button>
-
-                    <button
-                        onClick={() => setIsLogModalOpen(true)}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '0.5rem',
-                            padding: '0.6rem 1.2rem',
-                            borderRadius: '6px',
-                            background: '#262626',
-                            color: '#e5e5e5',
-                            border: '1px solid #404040',
-                            fontWeight: 500,
-                            cursor: 'pointer'
-                        }}
-                    >
-                        🕒 History
-                    </button>
-
-                    <button
-                        onClick={() => setIsEditModalOpen(true)}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '0.5rem',
-                            padding: '0.6rem 1.2rem',
-                            borderRadius: '6px',
-                            background: '#262626',
-                            color: '#e5e5e5',
-                            border: '1px solid #404040',
-                            fontWeight: 500,
-                            cursor: 'pointer'
-                        }}
-                    >
-                        ✎ Edit
-                    </button>
-
-                    <button
-                        onClick={() => setIsDeleteModalOpen(true)}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '0.5rem',
-                            padding: '0.6rem 1.2rem',
-                            borderRadius: '6px',
-                            background: 'transparent',
-                            color: '#fca5a5',
-                            border: '1px solid #7f1d1d',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            marginLeft: 'auto'
-                        }}
-                    >
-                        🗑 Delete
-                    </button>
-                </div>
             </div>
 
             {/* Tabs Section */}
             <div style={{
+                marginTop: '2rem',
                 marginBottom: '1.5rem',
                 background: '#0a0a0a',
                 border: '1px solid #262626',
