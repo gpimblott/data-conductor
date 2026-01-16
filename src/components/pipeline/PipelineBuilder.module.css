@@ -1,0 +1,27 @@
+.pipelineWrapper :global(.react-flow__controls) {
+    box-shadow: 0 0 0 1px #404040;
+    border-radius: 4px;
+}
+
+.pipelineWrapper :global(.react-flow__controls-button) {
+    background-color: #171717 !important;
+    border-bottom: 1px solid #404040;
+    fill: #ededed !important;
+    color: #ededed !important;
+}
+
+.pipelineWrapper :global(.react-flow__controls-button:last-child) {
+    border-bottom: none;
+}
+
+.pipelineWrapper :global(.react-flow__controls-button:hover) {
+    background-color: #262626 !important;
+}
+
+.pipelineWrapper :global(.react-flow__controls-button svg) {
+    fill: #ededed !important;
+}
+
+.pipelineWrapper :global(.react-flow__attribution) {
+    display: none;
+}

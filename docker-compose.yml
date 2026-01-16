@@ -1,0 +1,45 @@
+services:
+  neo4j:
+    image: neo4j:enterprise
+    container_name: data-conductor-neo4j
+    ports:
+      - "7474:7474" # HTTP
+      - "7687:7687" # Bolt
+    environment:
+      - NEO4J_AUTH=neo4j/password
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_PLUGINS=["bloom"]
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+
+  postgres:
+    image: apache/age
+    container_name: data-conductor-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=data_expert
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  mysql:
+    image: mysql:8.0
+    container_name: data-conductor-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=mysql
+      - MYSQL_DATABASE=test_db
+      - MYSQL_USER=mysql
+      - MYSQL_PASSWORD=mysql
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  postgres_data:
+  mysql_data:

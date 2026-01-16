@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Database migrate",
+            "request": "launch",
+            "runtimeArgs": [
+                "run",
+                "migrate",
+                "--",
+                "up"
+            ],
+            "runtimeExecutable": "npm",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "node"
+        },
+        {
+            "name": "Data Manager",
+            "request": "launch",
+            "runtimeArgs": [
+                "run",
+                "dev"
+            ],
+            "runtimeExecutable": "npm",
+            "type": "node",
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

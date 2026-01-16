@@ -1,0 +1,135 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.modal {
+    height: auto;
+    width: fit-content;
+    min-width: 320px;
+    max-width: 90vw;
+    background: #171717;
+    border: 1px solid #333;
+    border-radius: 8px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    animation: slideIn 0.2s ease-out;
+    padding: 0 !important;
+    /* Override generic card padding */
+    overflow: hidden;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #262626;
+}
+
+.header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #fff;
+    font-weight: 600;
+}
+
+.closeBtn {
+    background: none;
+    border: none;
+    color: #a3a3a3;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.closeBtn:hover {
+    color: #fff;
+}
+
+.body {
+    padding: 1.5rem;
+    color: #d4d4d4;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    background: #0a0a0a;
+    border-top: 1px solid #262626;
+}
+
+.cancelBtn {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: 1px solid #404040;
+    background: transparent;
+    color: #d4d4d4;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.cancelBtn:hover:not(:disabled) {
+    background: #262626;
+    color: #fff;
+}
+
+.confirmBtn {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #fff;
+    transition: all 0.2s;
+}
+
+.confirmBtn:disabled,
+.cancelBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.confirmBtn.primary {
+    background: #3b82f6;
+}
+
+.confirmBtn.primary:hover:not(:disabled) {
+    background: #2563eb;
+}
+
+.confirmBtn.danger {
+    background: #ef4444;
+}
+
+.confirmBtn.danger:hover:not(:disabled) {
+    background: #dc2626;
+}
