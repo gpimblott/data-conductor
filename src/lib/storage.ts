@@ -1,6 +1,8 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client } from '@aws-sdk/client-s3';
+import { Upload } from '@aws-sdk/lib-storage';
 import fs from 'fs';
 import path from 'path';
+import { Readable } from 'stream';
 
 const STORAGE_TYPE = process.env.STORAGE_TYPE || 'local';
 const DATA_DIR = process.env.DATA_DIR || './data';
@@ -16,9 +18,10 @@ function sanitizeName(name: string): string {
 
 /**
  * Saves content to storage (Local or S3).
+ * Content can be a string, Buffer, or Readable stream.
  * Returns the path or URI of the saved file.
  */
-export async function saveFile(connectionName: string, content: string, extension: string): Promise<string> {
+export async function saveFile(connectionName: string, content: string | Buffer | Readable, extension: string): Promise<string> {
     const safeName = sanitizeName(connectionName);
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `${timestamp}.${extension}`;
@@ -29,12 +32,18 @@ export async function saveFile(connectionName: string, content: string, extensio
         }
         const key = `downloads/${safeName}/${filename}`;
 
-        await s3Client.send(new PutObjectCommand({
-            Bucket: S3_BUCKET,
-            Key: key,
-            Body: content,
-            ContentType: extension === 'json' ? 'application/json' : 'text/plain'
-        }));
+        // Use lib-storage Upload for efficient stream handling (multipart)
+        const upload = new Upload({
+            client: s3Client,
+            params: {
+                Bucket: S3_BUCKET,
+                Key: key,
+                Body: content,
+                ContentType: extension === 'json' ? 'application/json' : 'text/plain'
+            }
+        });
+
+        await upload.done();
 
         return `s3://${S3_BUCKET}/${key}`;
     } else {
@@ -46,12 +55,21 @@ export async function saveFile(connectionName: string, content: string, extensio
         }
 
         const filePath = path.join(dirPath, filename);
-        // Absolute path is better for return value consistency? Or relative? 
-        // Logic currently expects a path it can read or reference. 
-        // path.resolve to match typical expectations.
         const absPath = path.resolve(filePath);
 
-        fs.writeFileSync(absPath, content);
+        if (content instanceof Readable) {
+            const writeStream = fs.createWriteStream(absPath);
+            await new Promise<void>((resolve, reject) => {
+                content.pipe(writeStream);
+                writeStream.on('finish', () => resolve());
+                writeStream.on('error', reject);
+                // Handle stream errors too if not piped correctly? content.on('error', reject)
+                content.on('error', reject);
+            });
+        } else {
+            fs.writeFileSync(absPath, content);
+        }
+
         return absPath;
     }
 }

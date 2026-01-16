@@ -18,6 +18,7 @@
 
 import { NextResponse } from 'next/server';
 import { syncConnection } from '@/lib/sync';
+import { jobQueue } from '@/lib/queue/jobQueue';
 
 export async function POST(
     request: Request,
@@ -25,7 +26,7 @@ export async function POST(
 ) {
     try {
         const { id } = await params;
-        const result = await syncConnection(id);
+        const result = await jobQueue.add(() => syncConnection(id));
         return NextResponse.json(result);
     } catch (error: any) {
         console.error('Sync API Error:', error);

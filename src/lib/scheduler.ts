@@ -21,6 +21,7 @@ import cron from 'node-cron';
 import { parseExpression } from 'cron-parser';
 import { db } from './db';
 import { syncConnection } from './sync';
+import { addJob } from './queue/jobQueue';
 
 let task: any = null;
 
@@ -42,14 +43,8 @@ export function startScheduler() {
 
             for (const conn of rows) {
                 if (shouldSync(conn)) {
-                    console.log(`Scheduler: Triggering sync for ${conn.name}`);
-                    // We trigger sync providing the ID. syncConnection handles DB status updates.
-                    // We don't await this to run in parallel? 
-                    // Better to await to avoid overwhelming if many feeds? 
-                    // Let's await for now to be safe.
-                    await syncConnection(conn.id).catch(err =>
-                        console.error(`Scheduler: Failed to sync ${conn.name}`, err)
-                    );
+                    console.log(`Scheduler: Queued sync for ${conn.name}`);
+                    addJob(() => syncConnection(conn.id));
                 }
             }
         } catch (error) {
