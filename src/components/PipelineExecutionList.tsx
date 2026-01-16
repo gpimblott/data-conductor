@@ -17,6 +17,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import LogViewerModal from './LogViewerModal';
 
 interface Execution {
     id: string;
@@ -34,6 +35,7 @@ interface Props {
 export default function PipelineExecutionList({ connectionId, limit }: Props) {
     const [executions, setExecutions] = useState<Execution[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedExecution, setSelectedExecution] = useState<Execution | null>(null);
 
     const fetchExecutions = async () => {
         setIsLoading(true);
@@ -87,6 +89,7 @@ export default function PipelineExecutionList({ connectionId, limit }: Props) {
                 {displayedExecutions.map((exec) => (
                     <div
                         key={exec.id}
+                        onClick={() => setSelectedExecution(exec)}
                         style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -94,8 +97,12 @@ export default function PipelineExecutionList({ connectionId, limit }: Props) {
                             background: '#171717',
                             border: '1px solid #262626',
                             padding: '0.75rem 1rem',
-                            borderRadius: '6px'
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            transition: 'border-color 0.2s'
                         }}
+                        onMouseEnter={(e) => e.currentTarget.style.borderColor = '#404040'}
+                        onMouseLeave={(e) => e.currentTarget.style.borderColor = '#262626'}
                     >
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -121,9 +128,21 @@ export default function PipelineExecutionList({ connectionId, limit }: Props) {
                                 </div>
                             )}
                         </div>
+                        <div style={{ color: '#525252', fontSize: '0.8rem' }}>
+                            View Logs →
+                        </div>
                     </div>
                 ))}
             </div>
+
+            {selectedExecution && (
+                <LogViewerModal
+                    isOpen={!!selectedExecution}
+                    onClose={() => setSelectedExecution(null)}
+                    title={`Logs: ${selectedExecution.id.substring(0, 8)}...`}
+                    externalLogs={selectedExecution.logs}
+                />
+            )}
         </div>
     );
 }

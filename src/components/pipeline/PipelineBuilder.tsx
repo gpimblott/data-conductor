@@ -46,11 +46,11 @@ const nodeTypes = {
     mysql_destination: MysqlDestinationNode,
 };
 
-let id = 0;
-const getId = () => `dndnode_${id++}`;
+const getId = () => `dndnode_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
 import NodeConfigPanel from './NodeConfigPanel';
 import AlertModal from '../AlertModal';
+import ConfirmationModal from '../ConfirmationModal';
 
 interface Props {
     connection: ConnectionType;
@@ -68,6 +68,7 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
     const [alertState, setAlertState] = useState<{ isOpen: boolean, title: string, message: string, type: 'success' | 'error' | 'info' }>({
         isOpen: false, title: '', message: '', type: 'info'
     });
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const isActive = connection.status !== 'PAUSED';
 
     // Load pipeline
@@ -206,8 +207,12 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
         }
     };
 
-    const handleDelete = async () => {
-        if (!confirm('Are you sure you want to delete this pipeline? This cannot be undone.')) return;
+    const handleDelete = () => {
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDelete = async () => {
+        setShowDeleteConfirm(false);
 
         try {
             const res = await fetch(`/api/connections/${connection.id}/pipeline`, {
@@ -312,6 +317,17 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
                     onUpdate={onUpdateNode}
                 />
             </div>
+            {showDeleteConfirm && (
+                <ConfirmationModal
+                    isOpen={showDeleteConfirm}
+                    title="Delete Pipeline"
+                    message="Are you sure you want to delete this pipeline? This cannot be undone."
+                    onConfirm={confirmDelete}
+                    onCancel={() => setShowDeleteConfirm(false)}
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                />
+            )}
             <AlertModal
                 isOpen={alertState.isOpen}
                 title={alertState.title}

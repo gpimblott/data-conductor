@@ -100,7 +100,27 @@ export async function runPipeline(connectionId: string, inputFilePath: string) {
                 inputData = [{ filePath: inputFilePath }];
             }
 
-            await logPipelineEvent(`Executing node: ${node.data.label} (${node.type})`);
+            const summarizeInput = (data: any) => {
+                if (Array.isArray(data)) {
+                    const base = `Array(${data.length})`;
+                    if (data.length > 0) {
+                        const first = data[0];
+                        if (first && typeof first === 'object') {
+                            if (first.filePath) return `${base} - Processing File: ${first.filePath}`;
+                            return `${base} - Sample: ${JSON.stringify(first).substring(0, 100)}${JSON.stringify(first).length > 100 ? '...' : ''}`;
+                        }
+                        return `${base} - Sample: ${String(first).substring(0, 50)}`;
+                    }
+                    return base;
+                }
+                if (typeof data === 'object' && data !== null) {
+                    if (data.filePath) return `Single File: ${data.filePath}`;
+                    return `Object keys: ${Object.keys(data).join(', ')}`;
+                }
+                return String(data);
+            };
+
+            await logPipelineEvent(`Executing node: ${node.data.label} (${node.type})`, 'INFO', { inputSummary: summarizeInput(inputData) });
 
             try {
                 const handler = registry[node.type];
@@ -125,7 +145,7 @@ export async function runPipeline(connectionId: string, inputFilePath: string) {
                 queue.push(...children);
 
             } catch (err: any) {
-                await logPipelineEvent(`Node execution failed: ${err.message}`, 'ERROR');
+                await logPipelineEvent(`Node execution failed: ${err.message}`, 'ERROR', { stack: err.stack });
                 throw err;
             }
         }

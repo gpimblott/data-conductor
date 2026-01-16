@@ -24,8 +24,8 @@ import styles from './LogViewerModal.module.css';
 
 interface Log {
     id: string;
-    connection_id: string | null;
-    connection_name: string;
+    connection_id?: string | null;
+    connection_name?: string;
     event_type: string;
     status: string;
     message: string;
@@ -38,9 +38,10 @@ interface Props {
     onClose: () => void;
     connectionId?: string | null; // If null, show global logs
     title?: string;
+    externalLogs?: any[];
 }
 
-export default function LogViewerModal({ isOpen, onClose, connectionId, title }: Props) {
+export default function LogViewerModal({ isOpen, onClose, connectionId, title, externalLogs }: Props) {
     const [logs, setLogs] = useState<Log[]>([]);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
@@ -71,16 +72,32 @@ export default function LogViewerModal({ isOpen, onClose, connectionId, title }:
 
     useEffect(() => {
         if (isOpen) {
-            fetchLogs();
+            if (externalLogs) {
+                // Map external logs (e.g. pipeline logs) to the Log interface
+                const mappedLogs = externalLogs.map((l: any, i: number) => ({
+                    id: `ext-${i}`,
+                    created_at: l.timestamp,
+                    event_type: l.level || 'INFO',
+                    status: l.level === 'ERROR' ? 'FAILURE' : 'SUCCESS',
+                    message: l.message,
+                    details: l.details,
+                    connection_name: ''
+                }));
+                setLogs(mappedLogs);
+                setTotalPages(1); // Pagination not supported for external logs array yet
+                setLoading(false);
+            } else {
+                fetchLogs();
+            }
         }
-    }, [isOpen, page, connectionId]);
+    }, [isOpen, page, connectionId, externalLogs]);
 
     // Reset page when opening for a different context
     useEffect(() => {
         if (isOpen) {
             setPage(1);
         }
-    }, [isOpen, connectionId]);
+    }, [isOpen, connectionId, externalLogs]);
 
     if (!isOpen) return null;
 
@@ -103,8 +120,8 @@ export default function LogViewerModal({ isOpen, onClose, connectionId, title }:
                                 <thead>
                                     <tr>
                                         <th>Time</th>
-                                        {!connectionId && <th>Connection</th>}
-                                        <th>Event</th>
+                                        {!connectionId && !externalLogs && <th>Connection</th>}
+                                        <th>Event/Level</th>
                                         <th>Status</th>
                                         <th>Message</th>
                                     </tr>
@@ -115,16 +132,16 @@ export default function LogViewerModal({ isOpen, onClose, connectionId, title }:
                                             <td className={styles.time}>
                                                 {new Date(log.created_at).toLocaleString()}
                                             </td>
-                                            {!connectionId && (
+                                            {!connectionId && !externalLogs && (
                                                 <td className={styles.connectionName}>{log.connection_name}</td>
                                             )}
                                             <td>
-                                                <span className={`${styles.badge} ${styles[log.event_type.toLowerCase()]}`}>
+                                                <span className={`${styles.badge} ${styles[log.event_type.toLowerCase()] || styles.info}`}>
                                                     {log.event_type}
                                                 </span>
                                             </td>
                                             <td>
-                                                <span className={`${styles.status} ${styles[log.status.toLowerCase()]}`}>
+                                                <span className={`${styles.status} ${styles[log.status.toLowerCase()] || styles.info}`}>
                                                     {log.status}
                                                 </span>
                                             </td>
@@ -146,21 +163,25 @@ export default function LogViewerModal({ isOpen, onClose, connectionId, title }:
                 </div>
 
                 <div className={styles.footer}>
-                    <button
-                        className={styles.pageBtn}
-                        disabled={page === 1}
-                        onClick={() => setPage(p => p - 1)}
-                    >
-                        Previous
-                    </button>
-                    <span>Page {page} of {totalPages || 1}</span>
-                    <button
-                        className={styles.pageBtn}
-                        disabled={page === totalPages}
-                        onClick={() => setPage(p => p + 1)}
-                    >
-                        Next
-                    </button>
+                    {!externalLogs && (
+                        <>
+                            <button
+                                className={styles.pageBtn}
+                                disabled={page === 1}
+                                onClick={() => setPage(p => p - 1)}
+                            >
+                                Previous
+                            </button>
+                            <span>Page {page} of {totalPages || 1}</span>
+                            <button
+                                className={styles.pageBtn}
+                                disabled={page === totalPages}
+                                onClick={() => setPage(p => p + 1)}
+                            >
+                                Next
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
         </div>

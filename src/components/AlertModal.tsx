@@ -16,7 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import React from 'react';
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './AlertModal.module.css';
 import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
@@ -29,7 +32,14 @@ interface Props {
 }
 
 export default function AlertModal({ isOpen, title, message, type = 'info', onClose }: Props) {
-    if (!isOpen) return null;
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+        return () => setMounted(false);
+    }, []);
+
+    if (!isOpen || !mounted) return null;
 
     let Icon = AlertCircle;
     let iconColor = '#3b82f6'; // blue default
@@ -42,9 +52,9 @@ export default function AlertModal({ isOpen, title, message, type = 'info', onCl
         iconColor = '#ef4444';
     }
 
-    return (
+    const modalContent = (
         <div className={styles.overlay}>
-            <div className={styles.modal}>
+            <div className={styles.modal} onClick={e => e.stopPropagation()}>
                 <div className={styles.header}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <Icon color={iconColor} size={24} />
@@ -73,4 +83,6 @@ export default function AlertModal({ isOpen, title, message, type = 'info', onCl
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 }

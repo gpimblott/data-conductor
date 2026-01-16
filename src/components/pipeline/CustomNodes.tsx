@@ -16,9 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
 import { Database, Rss, ArrowRight, Settings, X, Globe, FileJson, File as FileIcon } from 'lucide-react';
+import ConfirmationModal from '../ConfirmationModal';
 
 const nodeStyle = {
     background: '#171717',
@@ -77,12 +78,16 @@ export const SourceNode = memo(({ data }: NodeProps) => {
 
 export const RestApiNode = memo(({ id, data }: NodeProps) => {
     const { deleteElements } = useReactFlow();
+    const [showConfirm, setShowConfirm] = useState(false);
 
-    const onDelete = (e: React.MouseEvent) => {
+    const onDeleteClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (confirm('Delete this node?')) {
-            deleteElements({ nodes: [{ id }] });
-        }
+        setShowConfirm(true);
+    };
+
+    const confirmDelete = () => {
+        deleteElements({ nodes: [{ id }] });
+        setShowConfirm(false);
     };
 
     return (
@@ -93,12 +98,23 @@ export const RestApiNode = memo(({ id, data }: NodeProps) => {
                     <Globe size={14} color="#f59e0b" />
                     {data.label}
                 </div>
-                <button style={deleteButtonStyle} onClick={onDelete} title="Delete Node">
+                <button style={deleteButtonStyle} onClick={onDeleteClick} title="Delete Node">
                     <X size={14} />
                 </button>
             </div>
             <div style={{ color: '#a3a3a3' }}>REST API</div>
             <Handle type="source" position={Position.Right} style={{ background: '#f59e0b' }} />
+            {showConfirm && (
+                <ConfirmationModal
+                    isOpen={showConfirm}
+                    title="Delete Node"
+                    message="Are you sure you want to delete this node?"
+                    onConfirm={confirmDelete}
+                    onCancel={() => setShowConfirm(false)}
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                />
+            )}
         </div>
     );
 });
@@ -160,12 +176,16 @@ export const DestinationNode = memo(({ id, data }: NodeProps) => {
 
 export const FileDestinationNode = memo(({ id, data }: NodeProps) => {
     const { deleteElements } = useReactFlow();
+    const [showConfirm, setShowConfirm] = useState(false);
 
-    const onDelete = (e: React.MouseEvent) => {
+    const onDeleteClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (confirm('Delete this node?')) {
-            deleteElements({ nodes: [{ id }] });
-        }
+        setShowConfirm(true);
+    };
+
+    const confirmDelete = () => {
+        deleteElements({ nodes: [{ id }] });
+        setShowConfirm(false);
     };
 
     return (
@@ -176,23 +196,38 @@ export const FileDestinationNode = memo(({ id, data }: NodeProps) => {
                     <FileIcon size={14} color="#64748b" />
                     {data.label}
                 </div>
-                <button style={deleteButtonStyle} onClick={onDelete} title="Delete Node">
+                <button style={deleteButtonStyle} onClick={onDeleteClick} title="Delete Node">
                     <X size={14} />
                 </button>
             </div>
             <div style={{ color: '#a3a3a3' }}>File Output</div>
+            {showConfirm && (
+                <ConfirmationModal
+                    isOpen={showConfirm}
+                    title="Delete Node"
+                    message="Are you sure you want to delete this node?"
+                    onConfirm={confirmDelete}
+                    onCancel={() => setShowConfirm(false)}
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                />
+            )}
         </div>
     );
 });
 
 export const PostgresDestinationNode = memo(({ id, data }: NodeProps) => {
     const { deleteElements } = useReactFlow();
+    const [showConfirm, setShowConfirm] = useState(false);
 
-    const onDelete = (e: React.MouseEvent) => {
+    const onDeleteClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (confirm('Delete this node?')) {
-            deleteElements({ nodes: [{ id }] });
-        }
+        setShowConfirm(true);
+    };
+
+    const confirmDelete = () => {
+        deleteElements({ nodes: [{ id }] });
+        setShowConfirm(false);
     };
 
     return (
@@ -203,23 +238,38 @@ export const PostgresDestinationNode = memo(({ id, data }: NodeProps) => {
                     <Database size={14} color="#336791" />
                     {data.label}
                 </div>
-                <button style={deleteButtonStyle} onClick={onDelete} title="Delete Node">
+                <button style={deleteButtonStyle} onClick={onDeleteClick} title="Delete Node">
                     <X size={14} />
                 </button>
             </div>
             <div style={{ color: '#a3a3a3' }}>Postgres DB</div>
+            {showConfirm && (
+                <ConfirmationModal
+                    isOpen={showConfirm}
+                    title="Delete Node"
+                    message="Are you sure you want to delete this node?"
+                    onConfirm={confirmDelete}
+                    onCancel={() => setShowConfirm(false)}
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                />
+            )}
         </div>
     );
 });
 
 export const MysqlDestinationNode = memo(({ id, data }: NodeProps) => {
     const { deleteElements } = useReactFlow();
+    const [showConfirm, setShowConfirm] = useState(false);
 
-    const onDelete = (e: React.MouseEvent) => {
+    const onDeleteClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (confirm('Delete this node?')) {
-            deleteElements({ nodes: [{ id }] });
-        }
+        setShowConfirm(true);
+    };
+
+    const confirmDelete = () => {
+        deleteElements({ nodes: [{ id }] });
+        setShowConfirm(false);
     };
 
     return (
@@ -230,11 +280,22 @@ export const MysqlDestinationNode = memo(({ id, data }: NodeProps) => {
                     <Database size={14} color="#4ade80" />
                     {data.label}
                 </div>
-                <button style={deleteButtonStyle} onClick={onDelete} title="Delete Node">
+                <button style={deleteButtonStyle} onClick={onDeleteClick} title="Delete Node">
                     <X size={14} />
                 </button>
             </div>
             <div style={{ color: '#a3a3a3' }}>MySQL DB</div>
+            {showConfirm && (
+                <ConfirmationModal
+                    isOpen={showConfirm}
+                    title="Delete Node"
+                    message="Are you sure you want to delete this node?"
+                    onConfirm={confirmDelete}
+                    onCancel={() => setShowConfirm(false)}
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                />
+            )}
         </div>
     );
 });

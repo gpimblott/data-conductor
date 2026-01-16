@@ -16,61 +16,85 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import React from 'react';
-import styles from './ConfirmationModal.module.css';
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import styles from './AlertModal.module.css'; // Reusing Alert styles for consistency
+import { HelpCircle } from 'lucide-react';
 
 interface Props {
     isOpen: boolean;
-    onClose: () => void;
-    onConfirm: () => void;
     title: string;
     message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
     confirmText?: string;
     cancelText?: string;
-    variant?: 'danger' | 'primary';
-    isLoading?: boolean;
 }
 
 export default function ConfirmationModal({
     isOpen,
-    onClose,
-    onConfirm,
     title,
     message,
+    onConfirm,
+    onCancel,
     confirmText = 'Confirm',
-    cancelText = 'Cancel',
-    variant = 'primary',
-    isLoading = false
+    cancelText = 'Cancel'
 }: Props) {
-    if (!isOpen) return null;
+    const [mounted, setMounted] = useState(false);
 
-    return (
+    useEffect(() => {
+        setMounted(true);
+        return () => setMounted(false);
+    }, []);
+
+    if (!isOpen || !mounted) return null;
+
+    const modalContent = (
         <div className={styles.overlay}>
-            <div className={`${styles.modal} card`}>
+            <div className={styles.modal} onClick={e => e.stopPropagation()}>
                 <div className={styles.header}>
-                    <h3>{title}</h3>
-                    <button className={styles.closeBtn} onClick={onClose} disabled={isLoading}>&times;</button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <HelpCircle color="#eab308" size={24} />
+                        <h2>{title}</h2>
+                    </div>
                 </div>
                 <div className={styles.body}>
-                    <p>{message}</p>
+                    {message}
                 </div>
-                <div className={styles.footer}>
+                <div className={styles.footer} style={{ gap: '0.75rem' }}>
                     <button
-                        className={styles.cancelBtn}
-                        onClick={onClose}
-                        disabled={isLoading}
+                        onClick={onCancel}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            background: 'transparent',
+                            border: '1px solid #404040',
+                            color: '#a3a3a3',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                        }}
                     >
                         {cancelText}
                     </button>
                     <button
-                        className={`${styles.confirmBtn} ${styles[variant]}`}
                         onClick={onConfirm}
-                        disabled={isLoading}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            background: '#2563eb',
+                            border: 'none',
+                            color: '#e5e5e5',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: 500
+                        }}
                     >
-                        {isLoading ? 'Processing...' : confirmText}
+                        {confirmText}
                     </button>
                 </div>
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 }

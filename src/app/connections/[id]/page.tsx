@@ -25,6 +25,7 @@ import { Connection } from '@/types';
 import StatusBadge from '@/components/StatusBadge';
 import AddConnectionModal from '@/components/AddConnectionModal';
 import LogViewerModal from '@/components/LogViewerModal';
+import AlertModal from '@/components/AlertModal';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import Link from 'next/link';
 import PipelineBuilder from '@/components/pipeline/PipelineBuilder';
@@ -46,6 +47,9 @@ export default function ConnectionDetailPage() {
     const [isSyncing, setIsSyncing] = useState(false);
     const [isPipelineBuilderOpen, setIsPipelineBuilderOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'data' | 'executions'>('data');
+    const [alertState, setAlertState] = useState<{ isOpen: boolean, title: string, message: string, type: 'success' | 'error' | 'info' }>({
+        isOpen: false, title: '', message: '', type: 'info'
+    });
 
     if (isLoading) {
         return <div className="container" style={{ color: '#a3a3a3', marginTop: '2rem' }}>Loading connection...</div>;
@@ -65,7 +69,12 @@ export default function ConnectionDetailPage() {
         const result = await syncConnection(connection.id);
         setIsSyncing(false);
         if (!result.success) {
-            alert(`Run Failed: ${result.error}`);
+            setAlertState({
+                isOpen: true,
+                title: 'Run Failed',
+                message: result.error || 'Unknown error occurred',
+                type: 'error'
+            });
         }
     };
 
@@ -77,7 +86,12 @@ export default function ConnectionDetailPage() {
             setIsEditModalOpen(false);
         } catch (error) {
             console.error('Failed to update connection:', error);
-            alert('Failed to update connection');
+            setAlertState({
+                isOpen: true,
+                title: 'Update Failed',
+                message: 'Failed to update connection',
+                type: 'error'
+            });
         }
     };
 
@@ -355,13 +369,19 @@ export default function ConnectionDetailPage() {
 
             <ConfirmationModal
                 isOpen={isDeleteModalOpen}
-                onClose={() => setIsDeleteModalOpen(false)}
+                onCancel={() => setIsDeleteModalOpen(false)}
                 onConfirm={handleDelete}
                 title="Delete Connection"
                 message={`Are you sure you want to delete "${connection.name}"? This action cannot be undone.`}
                 confirmText="Delete Connection"
-                variant="danger"
-                isLoading={isDeleting}
+            />
+
+            <AlertModal
+                isOpen={alertState.isOpen}
+                title={alertState.title}
+                message={alertState.message}
+                type={alertState.type}
+                onClose={() => setAlertState(prev => ({ ...prev, isOpen: false }))}
             />
         </div >
     );

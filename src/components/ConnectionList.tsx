@@ -17,9 +17,10 @@
  */
 
 import Link from 'next/link';
-import React from 'react';
+import React, { useState } from 'react';
 import { Connection } from '@/types';
 import StatusBadge from './StatusBadge';
+import AlertModal from './AlertModal';
 import ConfirmationModal from './ConfirmationModal';
 import styles from './ConnectionList.module.css';
 
@@ -104,9 +105,12 @@ function SyncStatusDots({ statuses }: { statuses?: ('SUCCESS' | 'FAILURE')[] }) 
 
 
 export default function ConnectionList({ connections, isLoading, onSync, onEdit, onDelete, onViewLogs, viewMode }: Props) {
-    const [syncingId, setSyncingId] = React.useState<string | null>(null);
-    const [currentPage, setCurrentPage] = React.useState(1);
-    const [itemsPerPage, setItemsPerPage] = React.useState(10);
+    const [syncingId, setSyncingId] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [alertState, setAlertState] = useState<{ isOpen: boolean, title: string, message: string, type: 'success' | 'error' | 'info' }>({
+        isOpen: false, title: '', message: '', type: 'info'
+    });
     // Removed Delete Modal state as deletion moves to detail page (though props remain for now to not break build if used elsewhere, but ideally we cleanup)
     // Actually, we might want to keep delete logic here? No, user said "move delete button onto the new view/edit page".
     // So the list just navigates.
@@ -134,7 +138,12 @@ export default function ConnectionList({ connections, isLoading, onSync, onEdit,
         setSyncingId(null);
 
         if (!result.success) {
-            alert(`Sync Failed: ${result.error}`);
+            setAlertState({
+                isOpen: true,
+                title: 'Sync Failed',
+                message: result.error || 'Unknown error occurred',
+                type: 'error'
+            });
         }
     };
 
@@ -312,6 +321,13 @@ export default function ConnectionList({ connections, isLoading, onSync, onEdit,
                 </div>
             )}
             {renderPagination()}
+            <AlertModal
+                isOpen={alertState.isOpen}
+                title={alertState.title}
+                message={alertState.message}
+                type={alertState.type}
+                onClose={() => setAlertState(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 }
