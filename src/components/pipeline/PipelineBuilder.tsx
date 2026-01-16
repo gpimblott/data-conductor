@@ -32,7 +32,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import PipelineSidebar from './PipelineSidebar';
 import StatusBadge from '../StatusBadge';
-import { SourceNode, RestApiNode, TransformJsonNode, DestinationNode, FileDestinationNode, PostgresDestinationNode } from './CustomNodes';
+import { SourceNode, RestApiNode, TransformJsonNode, DestinationNode, FileDestinationNode, PostgresDestinationNode, MysqlDestinationNode } from './CustomNodes';
 import { Connection as ConnectionType } from '@/types';
 import styles from './PipelineBuilder.module.css';
 
@@ -43,6 +43,7 @@ const nodeTypes = {
     destination: DestinationNode, // Generic/Neo4j
     file_destination: FileDestinationNode,
     postgres_destination: PostgresDestinationNode,
+    mysql_destination: MysqlDestinationNode,
 };
 
 let id = 0;
@@ -299,6 +300,7 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
                         onPaneClick={onPaneClick}
                         nodeTypes={nodeTypes}
                         fitView
+                        fitViewOptions={{ padding: 0.5, maxZoom: 1 }}
                     >
                         <Controls />
                         <Background color="#262626" gap={16} />

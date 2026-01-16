@@ -64,6 +64,13 @@ export default function PipelineSidebar() {
                 </div>
                 <div
                     draggable
+                    onDragStart={(event) => onDragStart(event, 'mysql_destination', 'MySQL DB')}
+                    style={itemStyle}
+                >
+                    <Database size={16} color="#4ade80" /> MySQL DB
+                </div>
+                <div
+                    draggable
                     onDragStart={(event) => onDragStart(event, 'file_destination', 'File Output')}
                     style={itemStyle}
                 >

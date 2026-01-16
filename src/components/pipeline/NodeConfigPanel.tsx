@@ -33,6 +33,7 @@ export default function NodeConfigPanel({ node, onClose, onUpdate }: NodeConfigP
     const isRestApiNode = node.type === 'rest_api';
     const isFileDestNode = node.type === 'file_destination';
     const isPostgresNode = node.type === 'postgres_destination';
+    const isMysqlNode = node.type === 'mysql_destination';
 
     return (
         <div style={{
@@ -74,7 +75,7 @@ export default function NodeConfigPanel({ node, onClose, onUpdate }: NodeConfigP
             {isTransformNode && <TransformConfig node={node} onUpdate={onUpdate} />}
             {isRestApiNode && <RestApiConfig node={node} onUpdate={onUpdate} />}
             {isFileDestNode && <FileDestConfig node={node} onUpdate={onUpdate} />}
-            {isPostgresNode && <PostgresConfig node={node} onUpdate={onUpdate} />}
+            {(isPostgresNode || isMysqlNode) && <PostgresConfig node={node} onUpdate={onUpdate} />}
         </div>
     );
 }

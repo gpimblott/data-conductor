@@ -66,6 +66,7 @@ import { restApiHandler } from './processors/restApi';
 import { transformJsonHandler } from './processors/transformJson';
 import { fileOutputHandler } from './destinations/fileOutput';
 import { postgresDestinationHandler } from './destinations/postgres';
+import { mysqlDestinationHandler } from './destinations/mysql';
 
 const destinationHandler: NodeHandler = {
     async execute(ctx) {
@@ -82,4 +83,5 @@ export const registry: Record<string, NodeHandler> = {
     'destination': destinationHandler,
     'file_destination': fileOutputHandler,
     'postgres_destination': postgresDestinationHandler,
+    'mysql_destination': mysqlDestinationHandler,
 };

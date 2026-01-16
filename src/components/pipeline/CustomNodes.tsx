@@ -211,3 +211,30 @@ export const PostgresDestinationNode = memo(({ id, data }: NodeProps) => {
         </div>
     );
 });
+
+export const MysqlDestinationNode = memo(({ id, data }: NodeProps) => {
+    const { deleteElements } = useReactFlow();
+
+    const onDelete = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (confirm('Delete this node?')) {
+            deleteElements({ nodes: [{ id }] });
+        }
+    };
+
+    return (
+        <div style={{ padding: '10px', border: '1px solid #4ade80', borderRadius: '5px', background: '#1c1917', minWidth: '150px' }}>
+            <Handle type="target" position={Position.Left} style={{ background: '#4ade80' }} />
+            <div style={headerStyle}>
+                <div style={labelStyle}>
+                    <Database size={14} color="#4ade80" />
+                    {data.label}
+                </div>
+                <button style={deleteButtonStyle} onClick={onDelete} title="Delete Node">
+                    <X size={14} />
+                </button>
+            </div>
+            <div style={{ color: '#a3a3a3' }}>MySQL DB</div>
+        </div>
+    );
+});
