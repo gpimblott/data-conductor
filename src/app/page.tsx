@@ -26,6 +26,8 @@ import AddConnectionModal from '@/components/AddConnectionModal';
 import { Connection } from '@/types';
 import styles from './page.module.css';
 import { handleSignOut } from '@/lib/actions';
+import { Button } from '@/components/ui/Button';
+import { PageLayout } from '@/components/ui/PageLayout';
 
 export default function Dashboard() {
   const { connections, isLoading, addConnection, syncConnection, updateConnection, deleteConnection } = useConnections();
@@ -90,7 +92,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="container">
+    <PageLayout>
       <div className={styles.actionBar}>
         <div>
           <h2 className={styles.title}>Connections</h2>
@@ -130,18 +132,13 @@ export default function Dashboard() {
             <option value="ERROR">Error</option>
           </select>
 
-          <button
-            className="btn"
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => handleViewLogs(null)}
-            style={{
-              background: 'transparent',
-              border: '1px solid #404040',
-              color: '#a3a3a3',
-              fontSize: '0.875rem'
-            }}
           >
             All Logs
-          </button>
+          </Button>
 
           <div className={styles.viewToggle}>
             {/* ... (view toggle buttons) ... */}
@@ -176,12 +173,9 @@ export default function Dashboard() {
             </button>
           </div>
 
-          <button
-            className="btn btn-primary"
-            onClick={() => handleOpenModal()}
-          >
+          <Button variant="primary" onClick={() => handleOpenModal()}>
             + Add New
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -211,6 +205,6 @@ export default function Dashboard() {
         connectionId={logConnectionId}
         title={logConnectionId ? 'Connection History' : 'Activity Logs'}
       />
-    </div>
+    </PageLayout>
   );
 }

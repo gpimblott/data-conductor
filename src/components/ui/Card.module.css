@@ -1,0 +1,13 @@
+.card {
+    background-color: #171717;
+    /* Neutral 900 */
+    border: 1px solid #262626;
+    /* Neutral 800 */
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.noPadding {
+    padding: 0;
+}

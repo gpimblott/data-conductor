@@ -19,6 +19,7 @@
 import React, { useState } from 'react';
 import { useConnectionFiles } from '@/hooks/useConnections';
 import DataViewerModal from './DataViewerModal';
+import { EmptyState } from './ui/EmptyState';
 
 interface DataFileListProps {
     connectionId: string;
@@ -45,7 +46,13 @@ export default function DataFileList({ connectionId, limit }: DataFileListProps)
     }
 
     if (files.length === 0) {
-        return <div style={{ color: '#737373', padding: '1rem', fontStyle: 'italic' }}>No data retrieved yet. Run a sync to fetch data.</div>;
+        return (
+            <EmptyState
+                title="No Data Files"
+                description="No data has been retrieved/stored for this connection yet. Run a sync to fetch data."
+                icon="📁"
+            />
+        );
     }
 
     return (

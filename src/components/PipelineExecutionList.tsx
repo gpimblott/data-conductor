@@ -18,6 +18,7 @@
 
 import React, { useEffect, useState } from 'react';
 import LogViewerModal from './LogViewerModal';
+import { EmptyState } from './ui/EmptyState';
 
 interface Execution {
     id: string;
@@ -63,7 +64,13 @@ export default function PipelineExecutionList({ connectionId, limit }: Props) {
     }
 
     if (executions.length === 0) {
-        return <div style={{ color: '#737373', padding: '1rem', fontStyle: 'italic' }}>No pipeline executions found.</div>;
+        return (
+            <EmptyState
+                title="No Pipeline Executions"
+                description="This pipeline hasn't run yet. Trigger a run manually or wait for the scheduled time."
+                icon="🚀"
+            />
+        );
     }
 
     const displayedExecutions = limit ? executions.slice(0, limit) : executions;

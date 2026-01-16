@@ -23,6 +23,8 @@ import StatusBadge from './StatusBadge';
 import AlertModal from './AlertModal';
 import ConfirmationModal from './ConfirmationModal';
 import styles from './ConnectionList.module.css';
+import { Button } from './ui/Button';
+import { EmptyState } from './ui/EmptyState';
 
 // @ts-ignore
 import { parseExpression } from 'cron-parser';
@@ -195,9 +197,22 @@ export default function ConnectionList({ connections, isLoading, onSync, onEdit,
 
     if (connections.length === 0) {
         return (
-            <div className={styles.empty}>
-                <p>No connections found. Create one to get started.</p>
-            </div>
+            <EmptyState
+                title="No connections found"
+                description={
+                    isLoading
+                        ? "Loading your connections..."
+                        : "You haven't created any data connections yet. Get started by adding your first connection."
+                }
+                icon={isLoading ? "⟳" : "🔌"}
+                action={
+                    !isLoading && (
+                        <Button variant="primary" onClick={() => onEdit({} as any)}>
+                            + Add Connection
+                        </Button>
+                    )
+                }
+            />
         );
     }
 
@@ -224,14 +239,15 @@ export default function ConnectionList({ connections, isLoading, onSync, onEdit,
                                     className={styles.rowLink}
                                 >
                                     <td>
-                                        <button
-                                            className={styles.iconSyncBtn}
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
                                             onClick={(e) => handleSync(e, conn.id)}
                                             disabled={syncingId === conn.id}
                                             title="Run Now"
                                         >
                                             {syncingId === conn.id ? '...' : '⚡'}
-                                        </button>
+                                        </Button>
                                     </td>
                                     <td className={styles.tableName}>
                                         <Link href={`/connections/${conn.id}`} className={styles.linkOverlay}>
@@ -273,14 +289,15 @@ export default function ConnectionList({ connections, isLoading, onSync, onEdit,
                             <div className={styles.cardHeader}>
                                 <h3 className={styles.name}>{conn.name}</h3>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <button
-                                        className={styles.headerSyncBtn}
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
                                         onClick={(e) => handleSync(e, conn.id)}
                                         disabled={syncingId === conn.id}
                                         title="Run Now"
                                     >
                                         {syncingId === conn.id ? 'Running...' : '⚡ Run Now'}
-                                    </button>
+                                    </Button>
                                     <StatusBadge status={conn.status} />
                                 </div>
                             </div>

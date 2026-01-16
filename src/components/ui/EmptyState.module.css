@@ -1,0 +1,38 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    background-color: var(--card-bg);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+}
+
+.icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.description {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    max-width: 400px;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+}
+
+.action {
+    display: flex;
+    gap: 1rem;
+}
