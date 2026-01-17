@@ -39,7 +39,9 @@ import styles from './PipelineBuilder.module.css';
 import { SplitButton } from '@/components/ui/SplitButton';
 import { Dropdown, DropdownItem, DropdownSeparator } from '@/components/ui/Dropdown';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { Download, Upload } from 'lucide-react';
 import { handleSignOut } from '@/lib/actions';
+import { VersionHistoryPanel } from './VersionHistoryPanel';
 
 const nodeTypes = {
     source: SourceNode,
@@ -68,10 +70,65 @@ interface Props {
 
 const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) => {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-
     const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+
+    const handleExport = useCallback(() => {
+        if (reactFlowInstance) {
+            const flow = reactFlowInstance.toObject();
+            const exportData = {
+                name: connection.name,
+                timestamp: new Date().toISOString(),
+                flowConfig: flow
+            };
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `pipeline-${connection.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+    }, [reactFlowInstance, connection.name]);
+
+    const handleImport = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const content = e.target?.result as string;
+                const importData = JSON.parse(content);
+                const flow = importData.flowConfig || importData;
+
+                if (flow && flow.nodes && flow.edges) {
+                    if (confirm('Importing will overwrite the current pipeline configuration. Continue?')) {
+                        setNodes(flow.nodes || []);
+                        setEdges(flow.edges || []);
+                        if (flow.viewport && reactFlowInstance) {
+                            reactFlowInstance.setViewport(flow.viewport);
+                        }
+                        setAlertState({ isOpen: true, title: 'Success', message: 'Pipeline imported successfully!', type: 'success' });
+                    }
+                } else {
+                    alert('Invalid pipeline file format.');
+                }
+            } catch (error) {
+                console.error('Import error', error);
+                alert('Failed to parse pipeline file.');
+            } finally {
+                if (fileInputRef.current) fileInputRef.current.value = '';
+            }
+        };
+        reader.readAsText(file);
+    }, [reactFlowInstance, setNodes, setEdges]);
+
+
     const [selectedNode, setSelectedNode] = useState<Node | null>(null);
     const [alertState, setAlertState] = useState<{ isOpen: boolean, title: string, message: string, type: 'success' | 'error' | 'info' }>({
         isOpen: false, title: '', message: '', type: 'info'
@@ -304,6 +361,27 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
         }
     };
 
+    const [showVersionHistory, setShowVersionHistory] = useState(false);
+
+    const handleRestoreVersion = async (versionId: string) => {
+        try {
+            const res = await fetch(`/api/connections/${connection.id}/pipeline/restore`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ versionId })
+            });
+
+            if (res.ok) {
+                window.location.reload();
+            } else {
+                throw new Error('Failed to restore');
+            }
+        } catch (error) {
+            console.error('Restore error:', error);
+            setAlertState({ isOpen: true, title: 'Error', message: 'Failed to restore version', type: 'error' });
+        }
+    };
+
     const toggleStatus = async () => {
         if (onUpdateStatus) {
             onUpdateStatus(isActive ? 'PAUSED' : 'ACTIVE');
@@ -347,6 +425,7 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                    <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json" onChange={handleImport} />
 
                     {/* Run / Schedule Split Button */}
                     <SplitButton
@@ -406,7 +485,17 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
                         </button>
                     }>
                         <DropdownItem onClick={() => setShowHistory(!showHistory)} icon="🕒">
-                            {showHistory ? 'Hide History' : 'View History'}
+                            {showHistory ? 'Hide Run History' : 'View Run History'}
+                        </DropdownItem>
+                        <DropdownItem onClick={() => setShowVersionHistory(true)} icon="🔖">
+                            Version History
+                        </DropdownItem>
+                        <DropdownSeparator />
+                        <DropdownItem onClick={() => fileInputRef.current?.click()} icon="📥">
+                            Import Pipeline
+                        </DropdownItem>
+                        <DropdownItem onClick={handleExport} icon="📤">
+                            Export Pipeline
                         </DropdownItem>
                         <DropdownSeparator />
                         <DropdownItem variant="danger" onClick={handleDelete} icon="🗑">
@@ -473,6 +562,14 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
                         connectionId={connection.id}
                         onClose={() => setShowHistory(false)}
                         onViewDebug={handleViewDebugHistory}
+                    />
+                )}
+
+                {showVersionHistory && (
+                    <VersionHistoryPanel
+                        onClose={() => setShowVersionHistory(false)}
+                        connectionId={connection.id}
+                        onRestore={handleRestoreVersion}
                     />
                 )}
 

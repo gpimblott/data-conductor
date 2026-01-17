@@ -52,7 +52,7 @@ export async function POST(
     try {
         const { id } = await params;
         const body = await request.json();
-        const { flowConfig, name, isActive } = body;
+        const { flowConfig, name, isActive, description } = body;
 
         // Check if pipeline exists
         const { rows } = await db.query(
@@ -80,6 +80,24 @@ export async function POST(
                 [id, name || 'Default Pipeline', flowConfig, isActive !== undefined ? isActive : true]
             );
             pipelineId = res.rows[0].id;
+        }
+
+        // Save Version History
+        try {
+            const { rows: versionRows } = await db.query(
+                `SELECT COALESCE(MAX(version), 0) + 1 as next_version FROM pipeline_versions WHERE pipeline_id = $1`,
+                [pipelineId]
+            );
+            const nextVersion = versionRows[0].next_version;
+
+            await db.query(
+                `INSERT INTO pipeline_versions (pipeline_id, flow_config, version, description)
+                 VALUES ($1, $2, $3, $4)`,
+                [pipelineId, flowConfig, nextVersion, description || (rows.length > 0 ? 'Updated pipeline' : 'Initial commit')]
+            );
+        } catch (verErr) {
+            console.error('Failed to save pipeline version history:', verErr);
+            // Non-blocking error for main save, but worth logging
         }
 
         return NextResponse.json({ success: true, id: pipelineId });
