@@ -20,13 +20,14 @@ export default function ExecutionFilesModal({ isOpen, onClose, executionId, pipe
     // Extract files from outputs
     const files: any[] = [];
     Object.entries(outputs || {}).forEach(([nodeId, output]: [string, any]) => {
-        if (output && typeof output === 'object' && output.filePath) {
+        const filePath = output?.filePath || output?.path;
+        if (output && typeof output === 'object' && filePath) {
             files.push({
                 id: `${executionId}:${nodeId}`,
                 executionId,
                 nodeId,
-                filePath: output.filePath,
-                fileName: output.filePath.split(/[\\/]/).pop()
+                filePath: filePath,
+                fileName: filePath.split(/[\\/]/).pop()
             });
         }
     });

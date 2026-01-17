@@ -34,15 +34,17 @@ export async function GET(
         const outputs = rows[0].outputs || {};
         const output = outputs[nodeId];
 
-        if (!output || !output.filePath) {
+        const filePath = output?.filePath || output?.path;
+
+        if (!output || !filePath) {
             return NextResponse.json({ error: 'File output not found' }, { status: 404 });
         }
 
-        if (!fs.existsSync(output.filePath)) {
+        if (!fs.existsSync(filePath)) {
             return NextResponse.json({ error: 'File not found on server' }, { status: 404 });
         }
 
-        const content = fs.readFileSync(output.filePath, 'utf-8');
+        const content = fs.readFileSync(filePath, 'utf-8');
         return new NextResponse(content, {
             headers: { 'Content-Type': 'text/plain' }
         });

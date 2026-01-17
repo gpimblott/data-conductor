@@ -65,7 +65,7 @@ export default function ExecutionHistoryPanel({ pipelineId, onClose, onViewDebug
 
     const hasFiles = (outputs?: Record<string, any>) => {
         if (!outputs) return false;
-        return Object.values(outputs).some((out: any) => out && out.filePath);
+        return Object.values(outputs).some((out: any) => out && (out.filePath || out.path));
     };
 
     const formatDate = (dateStr: string) => {
