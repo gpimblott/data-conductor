@@ -34,6 +34,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { PageLayout } from '@/components/ui/PageLayout';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { PortalBreadcrumb } from '@/components/ui/PortalBreadcrumb';
 import { Dropdown, DropdownItem, DropdownSeparator } from '@/components/ui/Dropdown';
 import { SplitButton } from '@/components/ui/SplitButton';
 
@@ -143,13 +144,12 @@ export default function ConnectionDetailPage() {
 
     return (
         <PageLayout>
-            <Breadcrumb
+            <PortalBreadcrumb
                 items={[
                     { label: 'Dashboard', href: '/' },
                     { label: connection?.name || 'Loading...' }
                 ]}
             />
-
 
             <Card style={{ marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>

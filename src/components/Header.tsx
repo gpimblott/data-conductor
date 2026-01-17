@@ -27,7 +27,7 @@ export default async function Header() {
 
     return (
         <header className={styles.header}>
-            <div className={`container ${styles.inner}`}>
+            <div className={styles.inner}>
                 <div className={styles.logo}>
                     <Image
                         src="/icon.png"
@@ -38,6 +38,7 @@ export default async function Header() {
                         style={{ borderRadius: '8px' }}
                     />
                     <h1>DataConductor</h1>
+                    <div id="header-breadcrumb-portal"></div>
                 </div>
                 <nav>
                     {session?.user && (
