@@ -16,7 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import ReactFlow, {
     ReactFlowProvider,
     addEdge,
@@ -35,6 +36,10 @@ import StatusBadge from '../StatusBadge';
 import { SourceNode, RestApiNode, TransformJsonNode, DestinationNode, FileDestinationNode, PostgresDestinationNode, MysqlDestinationNode } from './CustomNodes';
 import { Connection as ConnectionType } from '@/types';
 import styles from './PipelineBuilder.module.css';
+import { SplitButton } from '@/components/ui/SplitButton';
+import { Dropdown, DropdownItem, DropdownSeparator } from '@/components/ui/Dropdown';
+import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { handleSignOut } from '@/lib/actions';
 
 const nodeTypes = {
     source: SourceNode,
@@ -316,163 +321,120 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#000' }}>
-            <div style={{ padding: '1rem', borderBottom: '1px solid #262626', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100, display: 'flex', flexDirection: 'column', background: '#0a0a0a' }}>
+            <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid #262626', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#171717', position: 'relative' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <button
-                        onClick={onClose}
-                        style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#a3a3a3',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            padding: 0
-                        }}
-                    >
-                        ← Back
-                    </button>
-                    <div style={{ width: '1px', height: '24px', background: '#262626' }}></div>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Pipeline Builder: {connection.name}</h2>
-                    <StatusBadge status={connection.status} />
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-
-                    {/* Run Dropdown */}
-                    <div style={{ position: 'relative' }}>
-                        <div style={{ display: 'flex', background: isRunning ? '#404040' : '#10b981', borderRadius: '4px' }}>
-                            <button
-                                onClick={() => handleRunPipeline(false)}
-                                disabled={isRunning}
-                                style={{
-                                    padding: '0.5rem 1rem',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: '#fff',
-                                    cursor: isRunning ? 'not-allowed' : 'pointer',
-                                    fontWeight: 500,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem',
-                                    borderRight: '1px solid rgba(0,0,0,0.1)'
-                                }}
-                            >
-                                {isRunning ? 'Running...' : '▶ Run Now'}
-                            </button>
-                            <button
-                                onClick={() => setIsRunMenuOpen(!isRunMenuOpen)}
-                                disabled={isRunning}
-                                style={{
-                                    padding: '0.5rem',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: '#fff',
-                                    cursor: isRunning ? 'not-allowed' : 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center'
-                                }}
-                            >
-                                <ChevronDown size={16} />
-                            </button>
-                        </div>
-
-                        {/* Dropdown Menu */}
-                        {isRunMenuOpen && (
-                            <div style={{
-                                position: 'absolute',
-                                top: '100%',
-                                right: 0,
-                                marginTop: '0.5rem',
-                                background: '#262626',
-                                border: '1px solid #404040',
-                                borderRadius: '4px',
-                                width: '150px',
-                                zIndex: 50,
-                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                            }}>
-                                <button
-                                    onClick={() => handleRunPipeline(false)}
-                                    style={{
-                                        width: '100%',
-                                        textAlign: 'left',
-                                        padding: '0.75rem 1rem',
-                                        background: 'transparent',
-                                        border: 'none',
-                                        borderBottom: '1px solid #333',
-                                        color: '#e5e5e5',
-                                        cursor: 'pointer',
-                                        fontSize: '0.9rem'
-                                    }}
-                                >
-                                    Run Now
-                                </button>
-                                <button
-                                    onClick={() => handleRunPipeline(true)}
-                                    style={{
-                                        width: '100%',
-                                        textAlign: 'left',
-                                        padding: '0.75rem 1rem',
-                                        background: 'transparent',
-                                        border: 'none',
-                                        color: '#e5e5e5',
-                                        cursor: 'pointer',
-                                        fontSize: '0.9rem'
-                                    }}
-                                >
-                                    Run Debug
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Overlay to close menu when clicking outside */}
-                        {isRunMenuOpen && (
-                            <div
-                                style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 40 }}
-                                onClick={() => setIsRunMenuOpen(false)}
-                            />
-                        )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <Image
+                            src="/icon.png"
+                            alt="Logo"
+                            width={24}
+                            height={24}
+                            style={{ borderRadius: '4px' }}
+                        />
+                        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.025em', margin: 0 }}>DataConductor</h1>
                     </div>
 
-                    {/* History Button */}
-                    <button
-                        onClick={() => setShowHistory(!showHistory)}
-                        style={{
-                            padding: '0.5rem',
-                            background: showHistory ? '#404040' : 'transparent',
-                            border: '1px solid #404040',
-                            color: '#e5e5e5',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                        title="View Run History"
+                    <div style={{ width: '1px', height: '24px', background: '#404040' }}></div>
+
+                    <Breadcrumb
+                        items={[
+                            { label: 'Dashboard', href: '/' },
+                            { label: connection.name, href: `/connections/${connection.id}` },
+                            { label: 'Pipeline Builder' }
+                        ]}
+                    />
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+
+                    {/* Run / Schedule Split Button */}
+                    <SplitButton
+                        label={isRunning ? "Running..." : "▶ Run Sync"}
+                        variant="primary"
+                        onClick={() => handleRunPipeline(false)}
+                        isLoading={isRunning}
+                        disabled={isRunning}
                     >
-                        <History size={18} />
-                    </button>
-
-                    <div style={{ width: '1px', height: '24px', background: '#262626', margin: '0 0.5rem' }}></div>
+                        <DropdownItem onClick={() => handleRunPipeline(false)} icon="▶">
+                            Run Sync
+                        </DropdownItem>
+                        <DropdownItem onClick={() => handleRunPipeline(true)} icon="🐞">
+                            Run Debug
+                        </DropdownItem>
+                        <DropdownSeparator />
+                        <DropdownItem
+                            onClick={toggleStatus}
+                            icon={isActive ? "⏸" : "▶"}
+                        >
+                            {isActive ? 'Disable Schedule' : 'Enable Schedule'}
+                        </DropdownItem>
+                    </SplitButton>
 
                     <button
-                        onClick={toggleStatus}
+                        onClick={() => handleSave(false)}
                         style={{
                             padding: '0.5rem 1rem',
                             background: '#262626',
                             border: '1px solid #404040',
+                            color: '#fff',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            height: '36px',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#404040'; e.currentTarget.style.borderColor = '#525252'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#262626'; e.currentTarget.style.borderColor = '#404040'; }}
+                    >
+                        Save
+                    </button>
+
+                    <Dropdown trigger={
+                        <button style={{
+                            padding: '0.5rem',
+                            background: 'transparent',
+                            border: '1px solid #404040',
                             color: '#e5e5e5',
                             borderRadius: '4px',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        {isActive ? '⏸ Pause' : '▶ Start'}
-                    </button>
-                    <button onClick={handleDelete} style={{ padding: '0.5rem 1rem', background: 'transparent', border: '1px solid #dc2626', color: '#dc2626', borderRadius: '4px', cursor: 'pointer' }}>Delete</button>
-                    <div style={{ width: '1px', background: '#262626', margin: '0 0.5rem' }}></div>
-                    <button onClick={() => handleSave(false)} style={{ padding: '0.5rem 1rem', background: '#3b82f6', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', fontWeight: 500 }}>Save Pipeline</button>
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            height: '36px'
+                        }}>
+                            Actions ▾
+                        </button>
+                    }>
+                        <DropdownItem onClick={() => setShowHistory(!showHistory)} icon="🕒">
+                            {showHistory ? 'Hide History' : 'View History'}
+                        </DropdownItem>
+                        <DropdownSeparator />
+                        <DropdownItem variant="danger" onClick={handleDelete} icon="🗑">
+                            Delete Pipeline
+                        </DropdownItem>
+                    </Dropdown>
+
+                    <div style={{ width: '1px', height: '20px', background: '#404040', margin: '0 0.5rem' }}></div>
+
+                    <form action={handleSignOut}>
+                        <button
+                            type="submit"
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#a3a3a3',
+                                fontSize: '0.875rem',
+                                padding: '0.5rem',
+                                cursor: 'pointer',
+                                height: '36px',
+                                display: 'flex',
+                                alignItems: 'center'
+                            }}
+                        >
+                            Sign Out
+                        </button>
+                    </form>
+
                 </div>
             </div>
 

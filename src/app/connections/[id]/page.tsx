@@ -28,13 +28,14 @@ import LogViewerModal from '@/components/LogViewerModal';
 import AlertModal from '@/components/AlertModal';
 import ConfirmationModal from '@/components/ConfirmationModal';
 import Link from 'next/link';
-import PipelineBuilder from '@/components/pipeline/PipelineBuilder';
 import DataFileList from '@/components/DataFileList';
 import PipelineExecutionList from '@/components/PipelineExecutionList';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { PageLayout } from '@/components/ui/PageLayout';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { Dropdown, DropdownItem, DropdownSeparator } from '@/components/ui/Dropdown';
+import { SplitButton } from '@/components/ui/SplitButton';
 
 export default function ConnectionDetailPage() {
     const router = useRouter();
@@ -50,7 +51,6 @@ export default function ConnectionDetailPage() {
     const [isPurgeModalOpen, setIsPurgeModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
-    const [isPipelineBuilderOpen, setIsPipelineBuilderOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'data' | 'executions'>('data');
     const [alertState, setAlertState] = useState<{ isOpen: boolean, title: string, message: string, type: 'success' | 'error' | 'info' }>({
         isOpen: false, title: '', message: '', type: 'info'
@@ -165,43 +165,23 @@ export default function ConnectionDetailPage() {
 
                     {/* Toolbar */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                        <Button
-                            variant="secondary"
-                            onClick={handleSync}
-                            disabled={isSyncing}
+
+                        <SplitButton
+                            label={connection.status === 'ACTIVE' ? "⏸ Disable Schedule" : "▶ Enable Schedule"}
+                            variant={connection.status === 'ACTIVE' ? "warning" : "success"}
+                            onClick={() => handleUpdate({ status: connection.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' })}
                             isLoading={isSyncing}
                         >
-                            {isSyncing ? 'Running...' : '▶ Run Now'}
-                        </Button>
-
-                        {connection.status === 'ACTIVE' ? (
-                            <Button
-                                variant="warning"
-                                onClick={() => handleUpdate({ status: 'PAUSED' })}
-                            >
-                                ⏸ Disable Schedule
-                            </Button>
-                        ) : (
-                            <Button
-                                variant="success"
-                                onClick={() => handleUpdate({ status: 'ACTIVE' })}
-                            >
-                                ▶ Enable Schedule
-                            </Button>
-                        )}
+                            <DropdownItem onClick={handleSync} icon="▶">
+                                Run Sync
+                            </DropdownItem>
+                        </SplitButton>
 
                         <Button
                             variant="secondary"
-                            onClick={() => setIsPipelineBuilderOpen(true)}
+                            onClick={() => router.push(`/connections/${connection.id}/pipeline`)}
                         >
                             ⚙️ Pipeline
-                        </Button>
-
-                        <Button
-                            variant="secondary"
-                            onClick={() => setIsLogModalOpen(true)}
-                        >
-                            🕒 History
                         </Button>
 
                         <Button
@@ -211,19 +191,21 @@ export default function ConnectionDetailPage() {
                             ✎ Edit
                         </Button>
 
-                        <Button
-                            variant="warning"
-                            onClick={() => setIsPurgeModalOpen(true)}
-                        >
-                            🧹 Purge History
-                        </Button>
+                        <Dropdown trigger={<Button variant="secondary">Actions ▾</Button>}>
+                            <DropdownItem onClick={() => setIsLogModalOpen(true)} icon="🕒">
+                                View History
+                            </DropdownItem>
 
-                        <Button
-                            variant="danger"
-                            onClick={() => setIsDeleteModalOpen(true)}
-                        >
-                            🗑 Delete
-                        </Button>
+                            <DropdownSeparator />
+
+                            <DropdownItem variant="danger" onClick={() => setIsPurgeModalOpen(true)} icon="🧹">
+                                Purge History
+                            </DropdownItem>
+
+                            <DropdownItem variant="danger" onClick={() => setIsDeleteModalOpen(true)} icon="🗑">
+                                Delete Connection
+                            </DropdownItem>
+                        </Dropdown>
                     </div>
                 </div>
 
@@ -307,19 +289,6 @@ export default function ConnectionDetailPage() {
                     <PipelineExecutionList connectionId={connection.id} limit={5} />
                 )}
             </Card>
-
-            {/* Pipeline Builder Overlay */}
-            {
-                isPipelineBuilderOpen && connection && (
-                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100, background: '#000' }}>
-                        <PipelineBuilder
-                            connection={connection}
-                            onClose={() => setIsPipelineBuilderOpen(false)}
-                            onUpdateStatus={(status) => handleUpdate({ status })}
-                        />
-                    </div>
-                )
-            }
 
             {/* Modals */}
             <AddConnectionModal
