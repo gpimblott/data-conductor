@@ -24,7 +24,8 @@ import { createExecutionDirectory, saveFile } from '@/lib/storage';
 import path from 'path';
 import fs from 'fs';
 import { Readable } from 'stream';
-import JSONStream from 'JSONStream';
+// @ts-ignore
+const JSONStream = require('JSONStream');
 
 interface NodeExecutionResult {
     nodeId: string;
@@ -36,10 +37,7 @@ interface NodeExecutionResult {
 export async function initializePipelineExecution(pipelineId: string): Promise<{ success: boolean, error?: string, data?: any }> {
     console.log(`Initializing pipeline execution: ${pipelineId}`);
     const { rows } = await db.query(
-        `SELECT p.*, c.name as conn_name 
-         FROM pipelines p 
-         LEFT JOIN connections c ON p.connection_id = c.id 
-         WHERE p.id = $1`,
+        `SELECT p.* FROM pipelines p WHERE p.id = $1`,
         [pipelineId]
     );
 
@@ -68,8 +66,8 @@ export async function initializePipelineExecution(pipelineId: string): Promise<{
             pipeline,
             nodes,
             edges,
-            connectionId: pipeline.connection_id,
-            connectionName: pipeline.conn_name || pipeline.name
+            connectionId: null,
+            connectionName: pipeline.name
         }
     };
 }

@@ -1,5 +1,6 @@
 import fs from 'fs';
-import JSONStream from 'JSONStream';
+// @ts-ignore
+const JSONStream = require('JSONStream');
 import { Readable } from 'stream';
 
 /**

@@ -45,7 +45,7 @@ export default function DataViewerModal({ isOpen, onClose, connectionId, fileId,
         setIsLoading(true);
         setError(null);
         try {
-            const baseUrl = entityType === 'pipeline' ? '/api/pipelines' : '/api/connections';
+            const baseUrl = '/api/pipelines';
             const res = await fetch(`${baseUrl}/${connectionId}/files/${fileId}`);
             if (!res.ok) throw new Error('Failed to fetch content');
             const text = await res.text();

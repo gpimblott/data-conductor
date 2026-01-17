@@ -4,7 +4,7 @@ import { decrypt } from '@/lib/crypto';
 import { Client } from 'pg';
 import { parse } from 'pg-connection-string';
 // @ts-ignore
-import JSONStream from 'JSONStream';
+const JSONStream = require('JSONStream');
 import QueryStream from 'pg-query-stream';
 import { Readable } from 'stream';
 

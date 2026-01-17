@@ -21,7 +21,7 @@ import fs from 'fs/promises';
 import { createWriteStream } from 'fs';
 import path from 'path';
 // @ts-ignore
-import JSONStream from 'JSONStream';
+const JSONStream = require('JSONStream');
 import { Stream } from 'stream';
 
 export const fileOutputHandler: NodeHandler = {
