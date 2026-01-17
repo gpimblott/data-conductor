@@ -18,7 +18,11 @@
 
 import { NodeHandler } from '../registry';
 import fs from 'fs/promises';
+import { createWriteStream } from 'fs';
 import path from 'path';
+// @ts-ignore
+import JSONStream from 'JSONStream';
+import { Stream } from 'stream';
 
 export const fileOutputHandler: NodeHandler = {
     async execute(ctx) {
@@ -27,7 +31,6 @@ export const fileOutputHandler: NodeHandler = {
         try {
             console.log('File Output Inputs:', JSON.stringify(ctx.inputs, null, 2));
 
-            const dataToWrite = ctx.inputs[0] !== undefined ? ctx.inputs[0] : { error: 'No input data received' };
             const outputDirEnv = process.env.PIPELINE_OUTPUT_DIR || 'data/pipeline_output';
             const outputDir = path.isAbsolute(outputDirEnv)
                 ? outputDirEnv
@@ -44,15 +47,55 @@ export const fileOutputHandler: NodeHandler = {
             filename = filename.replace(/{{timestamp}}/g, timestamp);
             filename = filename.replace(/{{date}}/g, new Date().toISOString().split('T')[0]);
 
-            // Ensure .json extension if not present (optional, but good practice, though user might want handling)
-            // Let's stick to just replacing placeholders for now.
             const filePath = path.join(outputDir, filename);
 
-            const content = typeof dataToWrite === 'string'
-                ? dataToWrite
-                : JSON.stringify(dataToWrite, null, 2);
+            const dataToWrite = ctx.inputs[0];
 
-            await fs.writeFile(filePath, content, 'utf-8');
+            if (dataToWrite && dataToWrite.filePath) {
+                console.log(`Streaming file input from ${dataToWrite.filePath} to output...`);
+                // It's a file path reference from the Orchestrator persistence
+                const sourcePath = dataToWrite.filePath;
+                const { createReadStream } = await import('fs');
+
+                const readStream = createReadStream(sourcePath);
+                const writeStream = createWriteStream(filePath);
+
+                await new Promise<void>((resolve, reject) => {
+                    readStream.pipe(writeStream)
+                        .on('finish', resolve)
+                        .on('error', reject);
+                    readStream.on('error', reject);
+                });
+
+            } else if (dataToWrite && (dataToWrite instanceof Stream || (dataToWrite.pipe && typeof dataToWrite.pipe === 'function'))) {
+                console.log('Streaming output to file...');
+                const writeStream = createWriteStream(filePath);
+
+                // Pipe Input Stream -> JSON Stringify Stream -> File Write Stream
+                // We use JSONStream.stringify() which turns object stream into valid JSON array string '[{},{}]'
+                const jsonStream = JSONStream.stringify();
+
+                await new Promise<void>((resolve, reject) => {
+                    dataToWrite
+                        .pipe(jsonStream)
+                        .pipe(writeStream)
+                        .on('finish', resolve)
+                        .on('error', reject);
+
+                    // Handle errors on intermediate streams
+                    dataToWrite.on('error', reject);
+                    jsonStream.on('error', reject);
+                });
+
+            } else {
+                // Static Data Fallback
+                const content = typeof dataToWrite === 'string'
+                    ? dataToWrite
+                    : JSON.stringify(dataToWrite || { error: 'No input' }, null, 2);
+
+                await fs.writeFile(filePath, content, 'utf-8');
+            }
+
             console.log(`Successfully wrote to ${filePath}`);
 
             return {

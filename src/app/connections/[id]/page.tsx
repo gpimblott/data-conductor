@@ -47,6 +47,7 @@ export default function ConnectionDetailPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isLogModalOpen, setIsLogModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isPurgeModalOpen, setIsPurgeModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isPipelineBuilderOpen, setIsPipelineBuilderOpen] = useState(false);
@@ -94,6 +95,36 @@ export default function ConnectionDetailPage() {
                 isOpen: true,
                 title: 'Update Failed',
                 message: 'Failed to update connection',
+                type: 'error'
+            });
+        }
+    };
+
+    const handlePurge = async () => {
+        try {
+            const res = await fetch(`/api/connections/${connection.id}/purge`, { method: 'POST' });
+            const data = await res.json();
+
+            setIsPurgeModalOpen(false);
+
+            if (res.ok) {
+                setAlertState({
+                    isOpen: true,
+                    title: 'Purge Successful',
+                    message: `Deleted ${data.deletedFiles} files and ${data.deletedExecutions} past executions.`,
+                    type: 'success'
+                });
+                // Ideally refresh logic here, but logs/executions list updates on mount or active fetch.
+                // We might need to trigger re-fetch if lists are cached.
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (err: any) {
+            setIsPurgeModalOpen(false);
+            setAlertState({
+                isOpen: true,
+                title: 'Purge Failed',
+                message: err.message || 'Unknown error',
                 type: 'error'
             });
         }
@@ -178,6 +209,13 @@ export default function ConnectionDetailPage() {
                             onClick={() => setIsEditModalOpen(true)}
                         >
                             ✎ Edit
+                        </Button>
+
+                        <Button
+                            variant="warning"
+                            onClick={() => setIsPurgeModalOpen(true)}
+                        >
+                            🧹 Purge History
                         </Button>
 
                         <Button
@@ -305,6 +343,15 @@ export default function ConnectionDetailPage() {
                 title="Delete Connection"
                 message={`Are you sure you want to delete "${connection.name}"? This action cannot be undone.`}
                 confirmText="Delete Connection"
+            />
+
+            <ConfirmationModal
+                isOpen={isPurgeModalOpen}
+                onCancel={() => setIsPurgeModalOpen(false)}
+                onConfirm={handlePurge}
+                title="Purge History"
+                message="Are you sure? This will remove all local data files and pipeline execution records, except for the last 3 runs. System logs will be preserved."
+                confirmText="Purge History"
             />
 
             <AlertModal

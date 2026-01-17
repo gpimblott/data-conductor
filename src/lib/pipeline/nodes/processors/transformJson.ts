@@ -18,45 +18,74 @@
 
 import { NodeHandler } from '../registry';
 import jsonata from 'jsonata';
+import { Transform } from 'stream';
+import fs from 'fs';
+import JSONStream from 'JSONStream';
 
 export const transformJsonHandler: NodeHandler = {
     async execute(ctx) {
         console.log('Transforming JSON...', ctx.config);
 
         try {
-            const input = ctx.inputs[0];
-            if (!input) {
-                throw new Error('No input data for transformation');
+            const inputRef = ctx.inputs[0];
+            if (!inputRef || !inputRef.filePath) {
+                throw new Error('No input file provided for transformation');
+            }
+
+            const filePath = inputRef.filePath;
+            if (!fs.existsSync(filePath)) {
+                throw new Error(`Input file not found: ${filePath}`);
             }
 
             let expressionString = '';
 
             // Handle "Simple" Mode (Mapping Rules)
             if (ctx.config.mode === 'simple' && ctx.config.rules && Array.isArray(ctx.config.rules)) {
-                // rules: { target: string, source: string }[]
-                // Construct object: { "target": source, ... }
                 const mappings = ctx.config.rules
                     .filter((r: any) => r.target && r.source)
                     .map((r: any) => `"${r.target}": ${r.source}`)
                     .join(', ');
-
                 expressionString = `{ ${mappings} }`;
             }
             // Handle "Advanced" Mode (Raw Expression)
             else if (ctx.config.expression) {
                 expressionString = ctx.config.expression;
             } else {
-                // Passthrough if no config
-                return { success: true, output: input };
+                // Passthrough if no config - just open read stream
+                return { success: true, output: fs.createReadStream(filePath) };
             }
 
             console.log(`Applying JSONata expression: ${expressionString}`);
             const expression = jsonata(expressionString);
-            const result = await expression.evaluate(input);
+
+            // Create Transform Stream
+            const transformStream = new Transform({
+                objectMode: true,
+                async transform(chunk, encoding, callback) {
+                    try {
+                        const result = await expression.evaluate(chunk);
+                        if (result !== undefined) {
+                            this.push(result);
+                        }
+                        callback();
+                    } catch (err: any) {
+                        console.error('Error transforming chunk:', err);
+                        callback(err);
+                    }
+                }
+            });
+
+            // Read File -> Parse JSON Array -> Transform -> (Orchestrator saves result)
+            // We assume input file is a JSON array or compatible stream of objects.
+            // Using JSONStream.parse('*') assumes top level array.
+            const inputStream = fs.createReadStream(filePath, { encoding: 'utf8' })
+                .pipe(JSONStream.parse('*'));
+
+            inputStream.pipe(transformStream);
 
             return {
                 success: true,
-                output: result
+                output: transformStream
             };
 
         } catch (error: any) {

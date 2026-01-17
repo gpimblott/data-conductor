@@ -1,20 +1,10 @@
 /*
  * DataConductor
  * Copyright (C) 2026
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+import fs from 'fs';
+import JSONStream from 'JSONStream';
 
 export interface NodeExecutionContext {
     nodeId: string;
@@ -36,29 +26,44 @@ export interface NodeHandler {
 
 const sourceHandler: NodeHandler = {
     async execute(ctx) {
-        console.log('Executing Source Node...', JSON.stringify(ctx.inputs, null, 2));
+        console.log('Executing Source Node (Streaming)...');
 
         // Orchestrator seeds the source node with { filePath: string }
         const input = ctx.inputs[0];
 
         if (input && input.filePath) {
             try {
-                const fs = await import('fs/promises');
-                const content = await fs.readFile(input.filePath, 'utf-8');
-                // Try parsing as JSON, otherwise return text
-                try {
-                    const json = JSON.parse(content);
-                    return { success: true, output: json };
-                } catch {
-                    return { success: true, output: content };
+                // Ensure file exists
+                if (!fs.existsSync(input.filePath)) {
+                    throw new Error(`Source file not found: ${input.filePath}`);
                 }
+
+                // Create Stream
+                // Check if file is an Object (needs items.*) or Array (needs *)
+                const fd = fs.openSync(input.filePath, 'r');
+                const buffer = Buffer.alloc(100);
+                fs.readSync(fd, buffer, 0, 100, 0);
+                fs.closeSync(fd);
+
+                const header = buffer.toString('utf8').trim();
+                const isObject = header.startsWith('{');
+
+                // If it's an object (like RSS output), we assume data is in 'items' array
+                const selector = isObject ? 'items.*' : '*';
+                console.log(`Source Node: Detected ${isObject ? 'Object' : 'Array'} input, using selector '${selector}'`);
+
+                const stream = fs.createReadStream(input.filePath, { encoding: 'utf8' })
+                    .pipe(JSONStream.parse(selector));
+
+                return { success: true, output: stream };
+
             } catch (err: any) {
                 return { success: false, error: `Failed to read source file: ${err.message}` };
             }
         }
 
-        // Fallback if no file path (e.g. testing)
-        return { success: true, output: input || {} };
+        // Fallback or Error if no file path
+        return { success: false, error: 'No source file path provided to Source Node' };
     }
 };
 

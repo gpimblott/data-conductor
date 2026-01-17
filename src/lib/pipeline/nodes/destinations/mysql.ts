@@ -71,7 +71,7 @@ export const mysqlDestinationHandler: NodeHandler = {
 
             let insertedCount = 0;
 
-            for (const item of dataArray) {
+            const processItem = async (item: any) => {
                 const columns: string[] = [];
                 const values: any[] = [];
                 const placeholders: string[] = [];
@@ -80,15 +80,62 @@ export const mysqlDestinationHandler: NodeHandler = {
                     if (map.column && map.sourcePath) {
                         columns.push(map.column);
                         const val = getPath(item, map.sourcePath);
-                        values.push(val);
+                        // FIX: Convert undefined to null for MySQL
+                        values.push(val === undefined ? null : val);
                         placeholders.push('?');
                     }
                 });
 
                 if (columns.length > 0) {
                     const query = `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${placeholders.join(', ')})`;
-                    // console.log('Executing:', query, values);
                     await connection.execute(query, values);
+                }
+            };
+
+            // Handle File-based Input (New Architecture)
+            if (inputData && inputData.filePath) {
+                console.log(`MySQL Destination: Reading input from ${inputData.filePath}`);
+
+                const fs = await import('fs');
+                // @ts-ignore
+                const JSONStream = (await import('JSONStream')).default || (await import('JSONStream'));
+
+                const fileStream = fs.createReadStream(inputData.filePath, { encoding: 'utf8' });
+                const parseStream = JSONStream.parse('*'); // Parse items from array
+
+                await new Promise<void>((resolve, reject) => {
+                    fileStream.pipe(parseStream);
+
+                    parseStream.on('data', async (item: any) => {
+                        // Pause to handle async insert (backpressure simulation)
+                        parseStream.pause();
+                        try {
+                            await processItem(item);
+                            insertedCount++;
+                            parseStream.resume();
+                        } catch (err) {
+                            parseStream.emit('error', err);
+                        }
+                    });
+
+                    parseStream.on('end', () => resolve());
+                    parseStream.on('error', (err: any) => reject(err));
+                    fileStream.on('error', (err: any) => reject(err));
+                });
+            }
+            // Handle Legacy Stream Input (In-memory)
+            // @ts-ignore
+            else if (inputData && (inputData.pipe || inputData instanceof require('stream').Stream)) {
+                console.log('MySQL Destination: Processing Stream input');
+                for await (const item of inputData) {
+                    await processItem(item);
+                    insertedCount++;
+                }
+            } else {
+                // Static Data Fallback
+                const dataArray = Array.isArray(inputData) ? inputData : [inputData];
+                for (const item of dataArray) {
+                    await processItem(item);
                     insertedCount++;
                 }
             }

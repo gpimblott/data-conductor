@@ -42,10 +42,12 @@ export const postgresDestinationHandler: NodeHandler = {
             table: ctx.config.table
         });
 
-        const inputData = ctx.inputs[0];
-        if (!inputData) {
-            return { success: false, error: 'No input data received' };
+        const inputRef = ctx.inputs[0];
+        if (!inputRef || !inputRef.filePath) {
+            return { success: false, error: 'No input file provided' };
         }
+
+        const filePath = inputRef.filePath;
 
         const client = new Client({
             host: ctx.config.host,
@@ -53,7 +55,7 @@ export const postgresDestinationHandler: NodeHandler = {
             database: ctx.config.database,
             user: ctx.config.user,
             password: ctx.config.password,
-            // ssl: { rejectUnauthorized: false } // Typical for cloud DBs, might need config
+            // ssl: { rejectUnauthorized: false } 
         });
 
         try {
@@ -67,16 +69,9 @@ export const postgresDestinationHandler: NodeHandler = {
                 throw new Error('Table or mapping configuration missing');
             }
 
-            // Normalize input to array
-            const dataArray = Array.isArray(inputData) ? inputData : [inputData];
-
-            // If the input is actually an object with an 'items' array (common in RSS feeds), utilize that?
-            // BUT: Transform node usually outputs the relevant array. 
-            // Let's assume input is the data we want to insert.
-
             let insertedCount = 0;
 
-            for (const item of dataArray) {
+            const processItem = async (item: any) => {
                 const columns: string[] = [];
                 const values: any[] = [];
                 const placeholders: string[] = [];
@@ -85,18 +80,49 @@ export const postgresDestinationHandler: NodeHandler = {
                     if (map.column && map.sourcePath) {
                         columns.push(map.column);
                         const val = getPath(item, map.sourcePath);
-                        values.push(val);
+                        values.push(val === undefined ? null : val);
                         placeholders.push(`$${index + 1}`);
                     }
                 });
 
                 if (columns.length > 0) {
                     const query = `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${placeholders.join(', ')})`;
-                    // console.log('Executing:', query, values);
                     await client.query(query, values);
                     insertedCount++;
                 }
-            }
+            };
+
+            // Read File and Stream to DB
+            // Using JSONStream to parse output array from previous node
+            const fs = require('fs');
+            const JSONStream = require('JSONStream');
+
+            const fileStream = fs.createReadStream(filePath, { encoding: 'utf8' });
+            const parseStream = JSONStream.parse('*');
+
+            // We need to wait for stream to finish
+            await new Promise<void>((resolve, reject) => {
+                fileStream.pipe(parseStream);
+
+                parseStream.on('data', async (item: any) => {
+                    // Pause stream to handle async DB insert? 
+                    // Postgres client might handle concurrency but let's be safe or just fire and forget might flood it.
+                    // Ideally we use a transform stream or careful await.
+                    // For now, simpler approach: buffering is handled by node streams somewhat, but 'data' event is fast.
+                    // Pausing is better.
+                    parseStream.pause();
+                    try {
+                        await processItem(item);
+                        parseStream.resume();
+                    } catch (err) {
+                        parseStream.emit('error', err);
+                    }
+                });
+
+                parseStream.on('end', () => resolve());
+                parseStream.on('error', (err: any) => reject(err));
+                fileStream.on('error', (err: any) => reject(err));
+            });
 
             console.log(`Postgres Destination: Inserted ${insertedCount} rows`);
             await client.end();

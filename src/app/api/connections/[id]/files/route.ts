@@ -18,6 +18,9 @@
 
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import fs from 'fs';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(
     request: Request,
@@ -26,7 +29,8 @@ export async function GET(
     try {
         const { id } = await params;
 
-        // Query logs for successful SYNC events which should contain the file path in details
+        // Query logs for successful SYNC events
+        // Fetch more than 5 to account for potential deleted files
         const { rows } = await db.query(
             `SELECT id, created_at, details
              FROM connection_logs
@@ -35,19 +39,27 @@ export async function GET(
                AND status = 'SUCCESS'
                AND details->>'filePath' IS NOT NULL
              ORDER BY created_at DESC
-             LIMIT 5`,
+             LIMIT 50`,
             [id]
         );
 
         const files = rows.map(row => {
             const details = row.details || {};
             return {
-                id: row.id, // We use the log ID as the file reference ID
+                id: row.id,
                 createdAt: row.created_at,
                 filePath: details.filePath,
                 fileSize: details.fileSize
             };
-        }).filter(f => f.filePath); // Only return logs that actually have a file path
+        })
+            .filter(f => {
+                if (!f.filePath) return false;
+                // If it's an S3 URL, assume it exists for now (or implement S3 HEAD check)
+                if (f.filePath.startsWith('s3://')) return true;
+                // Local file check
+                return fs.existsSync(f.filePath);
+            })
+            .slice(0, 5); // Return only top 5 existing files
 
         return NextResponse.json(files);
     } catch (error) {

@@ -51,6 +51,9 @@ const getId = () => `dndnode_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 import NodeConfigPanel from './NodeConfigPanel';
 import AlertModal from '../AlertModal';
 import ConfirmationModal from '../ConfirmationModal';
+import DebugResultModal from './DebugResultModal';
+import { History, ChevronDown } from 'lucide-react';
+import ExecutionHistoryPanel from './ExecutionHistoryPanel';
 
 interface Props {
     connection: ConnectionType;
@@ -69,6 +72,13 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
         isOpen: false, title: '', message: '', type: 'info'
     });
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    // New State for Running/Debugging
+    const [isRunning, setIsRunning] = useState(false);
+    const [isRunMenuOpen, setIsRunMenuOpen] = useState(false);
+    const [debugResult, setDebugResult] = useState<any>(null);
+    const [showHistory, setShowHistory] = useState(false);
+
     const isActive = connection.status !== 'PAUSED';
 
     // Load pipeline
@@ -145,7 +155,7 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
     );
 
     const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-        // Prevent opening for Source nodes if they don't need config, 
+        // Prevent opening for Source nodes if they don't need config,
         // but for now let's allow all non-source nodes or all nodes.
         if (node.type !== 'source') {
             setSelectedNode(node);
@@ -173,7 +183,7 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
         setSelectedNode(null);
     }, []);
 
-    const handleSave = async () => {
+    const handleSave = async (silent: boolean = false) => {
         if (!reactFlowInstance) return;
 
         const flow = reactFlowInstance.toObject();
@@ -190,12 +200,14 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
 
             if (!res.ok) throw new Error('Failed to save');
 
-            setAlertState({
-                isOpen: true,
-                title: 'Success',
-                message: 'Pipeline saved successfully!',
-                type: 'success'
-            });
+            if (!silent) {
+                setAlertState({
+                    isOpen: true,
+                    title: 'Success',
+                    message: 'Pipeline saved successfully!',
+                    type: 'success'
+                });
+            }
         } catch (error) {
             console.error('Save error:', error);
             setAlertState({
@@ -204,6 +216,54 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
                 message: 'Failed to save pipeline.',
                 type: 'error'
             });
+        }
+    };
+
+    const handleRunPipeline = async (debug: boolean = false) => {
+        setIsRunning(true);
+        setIsRunMenuOpen(false);
+        try {
+            // Auto-save before running to ensure latest config is used
+            await handleSave(true);
+
+            const res = await fetch(`/api/connections/${connection.id}/pipeline/run`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ debug })
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                if (debug) {
+                    setDebugResult(data);
+                } else {
+                    setAlertState({
+                        isOpen: true,
+                        title: 'Pipeline Started',
+                        message: 'Pipeline execution started successfully.',
+                        type: 'success'
+                    });
+                }
+            } else {
+                setAlertState({
+                    isOpen: true,
+                    title: 'Execution Failed',
+                    message: data.error || 'Unknown error',
+                    type: 'error'
+                });
+            }
+
+        } catch (error: any) {
+            console.error('Run error:', error);
+            setAlertState({
+                isOpen: true,
+                title: 'Execution Error',
+                message: error.message,
+                type: 'error'
+            });
+        } finally {
+            setIsRunning(false);
         }
     };
 
@@ -245,6 +305,16 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
         }
     };
 
+    const handleViewDebugHistory = (execution: any, debugData: any) => {
+        setDebugResult({
+            success: execution.status === 'COMPLETED',
+            executionId: execution.id,
+            error: execution.status === 'FAILED' ? 'Pipeline execution failed' : undefined, // Simplification, ideally we find the error in logs or store it better
+            debugData: debugData
+        });
+        setShowHistory(false); // Close history panel to show debug panel
+    };
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#000' }}>
             <div style={{ padding: '1rem', borderBottom: '1px solid #262626', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -269,7 +339,124 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
                     <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Pipeline Builder: {connection.name}</h2>
                     <StatusBadge status={connection.status} />
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+
+                    {/* Run Dropdown */}
+                    <div style={{ position: 'relative' }}>
+                        <div style={{ display: 'flex', background: isRunning ? '#404040' : '#10b981', borderRadius: '4px' }}>
+                            <button
+                                onClick={() => handleRunPipeline(false)}
+                                disabled={isRunning}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: '#fff',
+                                    cursor: isRunning ? 'not-allowed' : 'pointer',
+                                    fontWeight: 500,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    borderRight: '1px solid rgba(0,0,0,0.1)'
+                                }}
+                            >
+                                {isRunning ? 'Running...' : '▶ Run Now'}
+                            </button>
+                            <button
+                                onClick={() => setIsRunMenuOpen(!isRunMenuOpen)}
+                                disabled={isRunning}
+                                style={{
+                                    padding: '0.5rem',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: '#fff',
+                                    cursor: isRunning ? 'not-allowed' : 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <ChevronDown size={16} />
+                            </button>
+                        </div>
+
+                        {/* Dropdown Menu */}
+                        {isRunMenuOpen && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '100%',
+                                right: 0,
+                                marginTop: '0.5rem',
+                                background: '#262626',
+                                border: '1px solid #404040',
+                                borderRadius: '4px',
+                                width: '150px',
+                                zIndex: 50,
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                            }}>
+                                <button
+                                    onClick={() => handleRunPipeline(false)}
+                                    style={{
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        padding: '0.75rem 1rem',
+                                        background: 'transparent',
+                                        border: 'none',
+                                        borderBottom: '1px solid #333',
+                                        color: '#e5e5e5',
+                                        cursor: 'pointer',
+                                        fontSize: '0.9rem'
+                                    }}
+                                >
+                                    Run Now
+                                </button>
+                                <button
+                                    onClick={() => handleRunPipeline(true)}
+                                    style={{
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        padding: '0.75rem 1rem',
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: '#e5e5e5',
+                                        cursor: 'pointer',
+                                        fontSize: '0.9rem'
+                                    }}
+                                >
+                                    Run Debug
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Overlay to close menu when clicking outside */}
+                        {isRunMenuOpen && (
+                            <div
+                                style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 40 }}
+                                onClick={() => setIsRunMenuOpen(false)}
+                            />
+                        )}
+                    </div>
+
+                    {/* History Button */}
+                    <button
+                        onClick={() => setShowHistory(!showHistory)}
+                        style={{
+                            padding: '0.5rem',
+                            background: showHistory ? '#404040' : 'transparent',
+                            border: '1px solid #404040',
+                            color: '#e5e5e5',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                        title="View Run History"
+                    >
+                        <History size={18} />
+                    </button>
+
+                    <div style={{ width: '1px', height: '24px', background: '#262626', margin: '0 0.5rem' }}></div>
+
                     <button
                         onClick={toggleStatus}
                         style={{
@@ -285,7 +472,7 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
                     </button>
                     <button onClick={handleDelete} style={{ padding: '0.5rem 1rem', background: 'transparent', border: '1px solid #dc2626', color: '#dc2626', borderRadius: '4px', cursor: 'pointer' }}>Delete</button>
                     <div style={{ width: '1px', background: '#262626', margin: '0 0.5rem' }}></div>
-                    <button onClick={handleSave} style={{ padding: '0.5rem 1rem', background: '#3b82f6', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', fontWeight: 500 }}>Save Pipeline</button>
+                    <button onClick={() => handleSave(false)} style={{ padding: '0.5rem 1rem', background: '#3b82f6', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', fontWeight: 500 }}>Save Pipeline</button>
                 </div>
             </div>
 
@@ -311,12 +498,32 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
                         <Background color="#262626" gap={16} />
                     </ReactFlow>
                 </div>
+
+                {/* Side Panels */}
                 <NodeConfigPanel
                     node={selectedNode}
                     onClose={() => setSelectedNode(null)}
                     onUpdate={onUpdateNode}
                 />
+
+                {showHistory && (
+                    <ExecutionHistoryPanel
+                        connectionId={connection.id}
+                        onClose={() => setShowHistory(false)}
+                        onViewDebug={handleViewDebugHistory}
+                    />
+                )}
+
+                <DebugResultModal
+                    isOpen={!!debugResult}
+                    onClose={() => setDebugResult(null)}
+                    results={debugResult}
+                    executionId={debugResult?.executionId}
+                    nodes={nodes}
+                />
             </div>
+
+            {/* Modals */}
             {showDeleteConfirm && (
                 <ConfirmationModal
                     isOpen={showDeleteConfirm}
