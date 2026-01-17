@@ -15,13 +15,13 @@ interface Version {
 
 interface VersionHistoryPanelProps {
     onClose: () => void;
-    connectionId: string;
+    pipelineId: string;
     onRestore: (versionId: string) => Promise<void>;
 }
 
 export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
     onClose,
-    connectionId,
+    pipelineId,
     onRestore
 }) => {
     const [versions, setVersions] = useState<Version[]>([]);
@@ -31,12 +31,12 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
 
     useEffect(() => {
         fetchVersions();
-    }, [connectionId]);
+    }, [pipelineId]);
 
     const fetchVersions = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/connections/${connectionId}/pipeline/versions`);
+            const res = await fetch(`/api/pipelines/${pipelineId}/versions`);
             if (res.ok) {
                 const data = await res.json();
                 setVersions(data);
@@ -59,7 +59,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({
 
     const handleView = async (versionId: string) => {
         try {
-            const res = await fetch(`/api/connections/${connectionId}/pipeline/versions/${versionId}`);
+            const res = await fetch(`/api/pipelines/${pipelineId}/versions/${versionId}`);
             if (res.ok) {
                 const data = await res.json();
                 setViewConfig(JSON.stringify(data.flow_config, null, 2));

@@ -16,12 +16,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Database, FileText, Filter, Workflow, Globe, FileJson, File as FileIcon } from 'lucide-react';
+import { Database, FileText, Filter, Workflow, Globe, FileJson, File as FileIcon, Rss } from 'lucide-react';
 
 export default function PipelineSidebar() {
-    const onDragStart = (event: React.DragEvent, nodeType: string, label: string) => {
+    const onDragStart = (event: React.DragEvent, nodeType: string, label: string, connectionType?: string) => {
         event.dataTransfer.setData('application/reactflow', nodeType);
         event.dataTransfer.setData('application/reactflow/label', label);
+        if (connectionType) {
+            event.dataTransfer.setData('application/reactflow/connectionType', connectionType);
+        }
         event.dataTransfer.effectAllowed = 'move';
     };
 
@@ -34,6 +37,31 @@ export default function PipelineSidebar() {
             color: '#ededed'
         }}>
             <div style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: 600 }}>Toolbox</div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#737373', marginBottom: '0.5rem', fontWeight: 600 }}>Sources</div>
+                <div
+                    draggable
+                    onDragStart={(event) => onDragStart(event, 'source', 'RSS Feed', 'RSS')}
+                    style={itemStyle}
+                >
+                    <Rss size={16} /> RSS Feed
+                </div>
+                <div
+                    draggable
+                    onDragStart={(event) => onDragStart(event, 'source', 'HTTP Request', 'HTTP')}
+                    style={itemStyle}
+                >
+                    <Globe size={16} /> HTTP Request
+                </div>
+                <div
+                    draggable
+                    onDragStart={(event) => onDragStart(event, 'source', 'Database', 'DATABASE')}
+                    style={itemStyle}
+                >
+                    <Database size={16} /> Database (Postgres/MySQL)
+                </div>
+            </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
                 <div style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#737373', marginBottom: '0.5rem', fontWeight: 600 }}>Processors</div>

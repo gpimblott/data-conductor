@@ -62,15 +62,19 @@ const deleteButtonStyle = {
 };
 
 export const SourceNode = memo(({ data }: NodeProps) => {
+    const connType = data.connectionType || data.type || 'RSS';
+    const displayType = connType === 'RSS' ? 'RSS Feed' : connType === 'HTTP' ? 'HTTP Request' : connType === 'DATABASE' ? 'Database' : connType;
+    const isDb = connType === 'DATABASE' || connType === 'POSTGRES' || connType === 'MYSQL';
+
     return (
         <div style={{ ...nodeStyle, borderLeft: '4px solid #3b82f6' }}>
             <div style={headerStyle}>
                 <div style={labelStyle}>
-                    {data.type === 'DATABASE' ? <Database size={14} color="#3b82f6" /> : <Rss size={14} color="#3b82f6" />}
+                    {isDb ? <Database size={14} color="#3b82f6" /> : connType === 'HTTP' ? <Globe size={14} color="#3b82f6" /> : <Rss size={14} color="#3b82f6" />}
                     {data.label}
                 </div>
             </div>
-            <div style={{ color: '#a3a3a3' }}>Source: {data.subLabel}</div>
+            <div style={{ color: '#a3a3a3' }}>Source: {displayType}</div>
             <Handle type="source" position={Position.Right} style={{ background: '#3b82f6' }} />
         </div>
     );

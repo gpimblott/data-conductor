@@ -17,23 +17,46 @@
  */
 
 import { NodeHandler } from '../registry';
+import { Readable } from 'stream';
 
 export const restApiHandler: NodeHandler = {
     async execute(ctx) {
         console.log('Calling REST API...', ctx.config);
 
-        // TODO: Implement actual REST API call here
-        // 1. Extract URL, method, headers, and body from ctx.config
-        // 2. Perform fetch()
-        // 3. Return response data
+        const { url, method = 'GET', headers, body } = ctx.config;
+
+        if (!url) throw new Error('URL is required');
+
+        const options: RequestInit = {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                ...headers
+            }
+        };
+
+        if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+            options.body = typeof body === 'string' ? body : JSON.stringify(body);
+        }
+
+        const res = await fetch(url, options);
+
+        if (!res.ok) {
+            const errorText = await res.text(); // Read error for debugging
+            throw new Error(`API Request failed: ${res.status} ${res.statusText} - ${errorText}`);
+        }
+
+        if (!res.body) {
+            return { success: true, output: null };
+        }
+
+        // Convert Web Stream to Node Stream for compatibility with Orchestrator fs.pipe()
+        // @ts-ignore - Readable.fromWeb exists in Node 18+ types but might be missing in older definitions
+        const nodeStream = Readable.fromWeb(res.body);
 
         return {
             success: true,
-            output: {
-                ...ctx.inputs[0],
-                apiResponse: { status: 200, data: { mock: 'response' } },
-                source: 'REST API Stub'
-            }
+            output: nodeStream
         };
     }
 };

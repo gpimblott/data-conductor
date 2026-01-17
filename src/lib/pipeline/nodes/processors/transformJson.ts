@@ -20,7 +20,7 @@ import { NodeHandler } from '../registry';
 import jsonata from 'jsonata';
 import { Transform } from 'stream';
 import fs from 'fs';
-import JSONStream from 'JSONStream';
+import { createJsonInputStream } from '../../streamUtils';
 
 export const transformJsonHandler: NodeHandler = {
     async execute(ctx) {
@@ -33,9 +33,7 @@ export const transformJsonHandler: NodeHandler = {
             }
 
             const filePath = inputRef.filePath;
-            if (!fs.existsSync(filePath)) {
-                throw new Error(`Input file not found: ${filePath}`);
-            }
+            // File existence check handled by streamUtils
 
             let expressionString = '';
 
@@ -51,8 +49,8 @@ export const transformJsonHandler: NodeHandler = {
             else if (ctx.config.expression) {
                 expressionString = ctx.config.expression;
             } else {
-                // Passthrough if no config - just open read stream
-                return { success: true, output: fs.createReadStream(filePath) };
+                // Passthrough if no config
+                return { success: true, output: await createJsonInputStream(filePath) };
             }
 
             console.log(`Applying JSONata expression: ${expressionString}`);
@@ -65,7 +63,13 @@ export const transformJsonHandler: NodeHandler = {
                     try {
                         const result = await expression.evaluate(chunk);
                         if (result !== undefined) {
-                            this.push(result);
+                            if (Array.isArray(result)) {
+                                for (const item of result) {
+                                    this.push(item);
+                                }
+                            } else {
+                                this.push(result);
+                            }
                         }
                         callback();
                     } catch (err: any) {
@@ -75,11 +79,8 @@ export const transformJsonHandler: NodeHandler = {
                 }
             });
 
-            // Read File -> Parse JSON Array -> Transform -> (Orchestrator saves result)
-            // We assume input file is a JSON array or compatible stream of objects.
-            // Using JSONStream.parse('*') assumes top level array.
-            const inputStream = fs.createReadStream(filePath, { encoding: 'utf8' })
-                .pipe(JSONStream.parse('*'));
+            // Use smart stream logic to handle Array vs Object
+            const inputStream = await createJsonInputStream(filePath);
 
             inputStream.pipe(transformStream);
 

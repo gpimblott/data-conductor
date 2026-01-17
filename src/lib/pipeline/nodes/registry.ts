@@ -5,6 +5,7 @@
 
 import fs from 'fs';
 import JSONStream from 'JSONStream';
+import { syncRegistry } from './sync';
 
 export interface NodeExecutionContext {
     nodeId: string;
@@ -26,12 +27,12 @@ export interface NodeHandler {
 
 const sourceHandler: NodeHandler = {
     async execute(ctx) {
-        console.log('Executing Source Node (Streaming)...');
+        console.log('Executing Source Node...');
 
-        // Orchestrator seeds the source node with { filePath: string }
+        // 1. Check for Input File (Legacy / Manual Trigger)
         const input = ctx.inputs[0];
-
         if (input && input.filePath) {
+            console.log('Using Input File:', input.filePath);
             try {
                 // Ensure file exists
                 if (!fs.existsSync(input.filePath)) {
@@ -50,7 +51,7 @@ const sourceHandler: NodeHandler = {
 
                 // If it's an object (like RSS output), we assume data is in 'items' array
                 const selector = isObject ? 'items.*' : '*';
-                console.log(`Source Node: Detected ${isObject ? 'Object' : 'Array'} input, using selector '${selector}'`);
+                // console.log(`Source Node: Detected ${isObject ? 'Object' : 'Array'} input, using selector '${selector}'`);
 
                 const stream = fs.createReadStream(input.filePath, { encoding: 'utf8' })
                     .pipe(JSONStream.parse(selector));
@@ -62,8 +63,41 @@ const sourceHandler: NodeHandler = {
             }
         }
 
-        // Fallback or Error if no file path
-        return { success: false, error: 'No source file path provided to Source Node' };
+        // 2. Active Fetching (Embedded Config)
+        else if (ctx.config.connectionType) {
+            console.log(`Source Node: Active Fetching using ${ctx.config.connectionType}`);
+            const handler = syncRegistry[ctx.config.connectionType];
+            if (!handler) return { success: false, error: `Unsupported connection type: ${ctx.config.connectionType}` };
+
+            try {
+                // Construct pseudo-connection object with snake_case mapping for legacy handlers
+                const rawConfig = ctx.config.connectionConfig || {};
+                const connectionObj = {
+                    id: ctx.nodeId,
+                    type: ctx.config.connectionType as any,
+                    name: ctx.config.name || 'Source',
+                    status: 'ACTIVE',
+                    // Map camelCase config to snake_case expected by handlers
+                    source_url: rawConfig.url,
+                    connection_string: rawConfig.connectionString,
+                    sql_query: rawConfig.query,
+                    username: rawConfig.username,
+                    password: rawConfig.password,
+                    // Preserve options
+                    options: { convertXml: rawConfig.convertXml },
+                    ...rawConfig
+                };
+
+                const result = await handler.execute(connectionObj as any); // Cast to Connection
+
+                return { success: true, output: result.data };
+            } catch (err: any) {
+                return { success: false, error: `Fetch failed: ${err.message}` };
+            }
+        }
+
+        // Fallback or Error
+        return { success: false, error: 'No source input provided and no connection config found.' };
     }
 };
 

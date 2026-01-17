@@ -17,6 +17,7 @@
  */
 
 import { NodeHandler } from '../registry';
+import { createJsonInputStream } from '../../streamUtils';
 
 // Simple deep get implementation if lodash not available
 function getPath(obj: any, path: string, defaultValue?: any) {
@@ -93,34 +94,27 @@ export const mysqlDestinationHandler: NodeHandler = {
             };
 
             // Handle File-based Input (New Architecture)
+            // Handle File-based Input (New Architecture)
             if (inputData && inputData.filePath) {
                 console.log(`MySQL Destination: Reading input from ${inputData.filePath}`);
 
-                const fs = await import('fs');
-                // @ts-ignore
-                const JSONStream = (await import('JSONStream')).default || (await import('JSONStream'));
-
-                const fileStream = fs.createReadStream(inputData.filePath, { encoding: 'utf8' });
-                const parseStream = JSONStream.parse('*'); // Parse items from array
+                const dataStream = await createJsonInputStream(inputData.filePath);
 
                 await new Promise<void>((resolve, reject) => {
-                    fileStream.pipe(parseStream);
-
-                    parseStream.on('data', async (item: any) => {
+                    dataStream.on('data', async (item: any) => {
                         // Pause to handle async insert (backpressure simulation)
-                        parseStream.pause();
+                        dataStream.pause();
                         try {
                             await processItem(item);
                             insertedCount++;
-                            parseStream.resume();
+                            dataStream.resume();
                         } catch (err) {
-                            parseStream.emit('error', err);
+                            dataStream.emit('error', err);
                         }
                     });
 
-                    parseStream.on('end', () => resolve());
-                    parseStream.on('error', (err: any) => reject(err));
-                    fileStream.on('error', (err: any) => reject(err));
+                    dataStream.on('end', () => resolve());
+                    dataStream.on('error', (err: any) => reject(err));
                 });
             }
             // Handle Legacy Stream Input (In-memory)

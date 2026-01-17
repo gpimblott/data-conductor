@@ -24,9 +24,10 @@ interface DataViewerModalProps {
     connectionId: string;
     fileId: string | null;
     fileName: string;
+    entityType?: 'connection' | 'pipeline';
 }
 
-export default function DataViewerModal({ isOpen, onClose, connectionId, fileId, fileName }: DataViewerModalProps) {
+export default function DataViewerModal({ isOpen, onClose, connectionId, fileId, fileName, entityType = 'connection' }: DataViewerModalProps) {
     const [content, setContent] = useState<string>('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -44,7 +45,8 @@ export default function DataViewerModal({ isOpen, onClose, connectionId, fileId,
         setIsLoading(true);
         setError(null);
         try {
-            const res = await fetch(`/api/connections/${connectionId}/files/${fileId}`);
+            const baseUrl = entityType === 'pipeline' ? '/api/pipelines' : '/api/connections';
+            const res = await fetch(`${baseUrl}/${connectionId}/files/${fileId}`);
             if (!res.ok) throw new Error('Failed to fetch content');
             const text = await res.text();
             setContent(text);

@@ -33,49 +33,97 @@ interface NodeExecutionResult {
     error?: string;
 }
 
-export async function runPipeline(connectionId: string, inputFilePath: string, options?: { debug?: boolean }) {
-    console.log(`Checking for active pipelines for connection: ${connectionId}`);
-
+export async function initializePipelineExecution(pipelineId: string): Promise<{ success: boolean, error?: string, data?: any }> {
+    console.log(`Initializing pipeline execution: ${pipelineId}`);
     const { rows } = await db.query(
-        `SELECT * FROM pipelines WHERE connection_id = $1 ORDER BY created_at DESC LIMIT 1`,
-        [connectionId]
+        `SELECT p.*, c.name as conn_name 
+         FROM pipelines p 
+         LEFT JOIN connections c ON p.connection_id = c.id 
+         WHERE p.id = $1`,
+        [pipelineId]
     );
 
     if (rows.length === 0) {
-        console.log('No pipeline found.');
-        return { success: false, error: 'No pipeline found' };
+        console.log('Pipeline not found.');
+        return { success: false, error: 'Pipeline not found' };
     }
 
     const pipeline = rows[0];
-    const { nodes, edges } = pipeline.flow_config;
+    const { nodes, edges } = pipeline.flow_config || {};
 
     if (!nodes || nodes.length === 0) {
         console.log('Pipeline has no nodes.');
         return { success: false, error: 'Pipeline has no nodes' };
     }
 
-    // Create Execution Record
     const execRes = await db.query(
         `INSERT INTO pipeline_executions (pipeline_id, status, logs) VALUES ($1, 'RUNNING', '[]') RETURNING id`,
         [pipeline.id]
     );
-    const executionId = execRes.rows[0].id;
+
+    return {
+        success: true,
+        data: {
+            executionId: execRes.rows[0].id,
+            pipeline,
+            nodes,
+            edges,
+            connectionId: pipeline.connection_id,
+            connectionName: pipeline.conn_name || pipeline.name
+        }
+    };
+}
+
+export async function executePipeline(initData: any, inputFilePath: string | null | undefined, options?: { debug?: boolean }) {
+    const { executionId, nodes, edges, connectionId, connectionName } = initData;
     const logs: any[] = [];
-    const debugData: Record<string, { inputs: any[], outputs: any[] }> = {}; // NodeId -> { inputs: [], outputs: [] }
+    const debugData: Record<string, { inputs: any[], outputs: any[] }> = {};
+    const executionResults = new Map<string, any>();
 
     const logPipelineEvent = async (message: string, level: 'INFO' | 'ERROR' = 'INFO', details?: any) => {
         logs.push({ timestamp: new Date(), message, level, details });
         await db.query(`UPDATE pipeline_executions SET logs = $1 WHERE id = $2`, [JSON.stringify(logs), executionId]);
     };
 
+    // Helper functions
+    const truncate = (obj: any): any => {
+        const str = JSON.stringify(obj, null, 2);
+        if (str && str.length > 500) {
+            return str.substring(0, 500) + '... (truncated)';
+        }
+        try { return JSON.parse(str); } catch { return str; }
+    };
+
+    const captureFileDebug = async (filePath: string, nodeId: string, type: 'inputs' | 'outputs') => {
+        if (!options?.debug) return;
+        if (!debugData[nodeId]) debugData[nodeId] = { inputs: [], outputs: [] };
+
+        try {
+            if (fs.existsSync(filePath)) {
+                const content = fs.readFileSync(filePath, 'utf-8');
+                const snippet = content.slice(0, 2000);
+                try {
+                    const json = JSON.parse(snippet);
+                    if (Array.isArray(json)) {
+                        debugData[nodeId][type].push(...json.slice(0, 5).map(truncate));
+                    } else {
+                        debugData[nodeId][type].push(truncate(json));
+                    }
+                } catch (e) {
+                    debugData[nodeId][type].push(snippet.substring(0, 500));
+                }
+            }
+        } catch (e) {
+            console.warn(`Failed to capture debug data from ${filePath}`, e);
+        }
+    };
+
     try {
         await logPipelineEvent('Pipeline execution started');
 
-        // Setup Execution Directory
         const execDir = createExecutionDirectory(executionId);
         console.log(`Execution Directory: ${execDir}`);
 
-        // Build Graph
         const nodeMap = new Map<string, any>(nodes.map((n: any) => [n.id, n]));
         const outgoingEdges = new Map<string, string[]>();
 
@@ -84,61 +132,13 @@ export async function runPipeline(connectionId: string, inputFilePath: string, o
             outgoingEdges.get(e.source)?.push(e.target);
         });
 
-        // Find Source Node
         const sourceNode = nodes.find((n: any) => n.type === 'source');
         if (!sourceNode) throw new Error('No source node found in pipeline');
 
-        // Topological Sort / Traversal (Simple BFS)
         const queue = [sourceNode.id];
         const visited = new Set<string>();
-        // Map Node ID corresponding output FILE PATH (or object for metadata)
-        const executionResults = new Map<string, any>();
 
-        // Initialize Source Output: The input trigger file IS the source output effectively.
-        // We map the source node ID to the input file path so children read from it.
         executionResults.set(sourceNode.id, { filePath: inputFilePath });
-
-        // Helper to truncate for debug
-        const truncate = (obj: any): any => {
-            const str = JSON.stringify(obj, null, 2);
-            if (str && str.length > 500) {
-                return str.substring(0, 500) + '... (truncated)';
-            }
-            try { return JSON.parse(str); } catch { return str; }
-        };
-
-        // Helper to capture file head for debug inputs/outputs
-        const captureFileDebug = async (filePath: string, nodeId: string, type: 'inputs' | 'outputs') => {
-            if (!options?.debug) return;
-            if (!debugData[nodeId]) debugData[nodeId] = { inputs: [], outputs: [] };
-
-            try {
-                // Read first 5 lines/objects
-                if (fs.existsSync(filePath)) {
-                    // Quick and dirty: read small chunk
-                    const content = fs.readFileSync(filePath, 'utf-8'); // CAREFUL with huge files, better to stream head
-                    // Just take a snippet
-                    const snippet = content.slice(0, 2000);
-                    // Try to parse json lines or array?
-                    // If JSON array
-                    try {
-                        const json = JSON.parse(snippet); // Might fail if truncated
-                        // If valid json array/obj, push it
-                        if (Array.isArray(json)) {
-                            debugData[nodeId][type].push(...json.slice(0, 5).map(truncate));
-                        } else {
-                            debugData[nodeId][type].push(truncate(json));
-                        }
-                    } catch (e) {
-                        // Maybe it's NDJSON? or just plain text
-                        debugData[nodeId][type].push(snippet.substring(0, 500));
-                    }
-                }
-            } catch (e) {
-                console.warn(`Failed to capture debug data from ${filePath}`, e);
-            }
-        };
-
 
         while (queue.length > 0) {
             const nodeId = queue.shift()!;
@@ -146,8 +146,6 @@ export async function runPipeline(connectionId: string, inputFilePath: string, o
             visited.add(nodeId);
 
             const node = nodeMap.get(nodeId);
-
-            // Collect Input File Paths
             const inputFiles: any[] = [];
 
             const parentEdges = edges.filter((e: any) => e.target === nodeId);
@@ -160,22 +158,14 @@ export async function runPipeline(connectionId: string, inputFilePath: string, o
                 return pNode?.data?.label || e.source;
             }).join(', ');
 
-            // Source node special case
             if (node.type === 'source') {
-                // The source node expects the input file path to be passed as an input.
-                // We pre-seeded this in executionResults at the start.
                 const sourceSeed = executionResults.get(nodeId);
-                if (sourceSeed) {
-                    inputFiles.push(sourceSeed);
-                }
+                if (sourceSeed) inputFiles.push(sourceSeed);
             }
 
-            // Capture Debug INPUTS (File-based now)
             if (options?.debug && node.type !== 'source') {
                 for (const input of inputFiles) {
-                    if (input.filePath) {
-                        await captureFileDebug(input.filePath, nodeId, 'inputs');
-                    }
+                    if (input.filePath) await captureFileDebug(input.filePath, nodeId, 'inputs');
                 }
             }
 
@@ -187,8 +177,6 @@ export async function runPipeline(connectionId: string, inputFilePath: string, o
                 const handler = registry[node.type];
                 if (!handler) throw new Error(`No handler for node type: ${node.type}`);
 
-                // Execute Node
-                // Inputs are now objects like { filePath: '/path/to/file.json' }
                 const result = await handler.execute({
                     nodeId,
                     config: node.data,
@@ -197,46 +185,55 @@ export async function runPipeline(connectionId: string, inputFilePath: string, o
 
                 if (!result.success) throw new Error(result.error || 'Node execution failed');
 
-                // Output Persistence Logic
                 let outputResult = result.output;
 
-                // If output contains a Stream, persist it to file
-                // We check if output is stream-like
                 if (outputResult && (outputResult instanceof Readable || typeof outputResult.pipe === 'function')) {
                     const ext = 'json';
-                    // Serialize Object Stream to JSON Array Stream for storage
                     const serializedStream = outputResult.pipe(JSONStream.stringify());
-
-                    // Save to execution directory
-                    const persistedPath = await saveFile(nodeId, serializedStream, ext, execDir);
-
+                    // Use label for filename if available, otherwise nodeId
+                    const filenameBase = node.data?.label || `${node.type}_${node.id}`;
+                    const persistedPath = await saveFile(filenameBase, serializedStream, ext, execDir);
                     outputResult = { filePath: persistedPath };
                     console.log(`Node ${nodeId} output persisted to ${persistedPath}`);
                 }
-                // If output is raw data (Array/Object), save it too if substantial?
-                else if (outputResult && (Array.isArray(outputResult) || (typeof outputResult === 'object' && !outputResult.filePath && !outputResult.destination))) {
-                    // It's a data object, save it to file so next node can read it
-                    const persistedPath = await saveFile(nodeId, JSON.stringify(outputResult, null, 2), 'json', execDir);
+                else if (outputResult && (
+                    Array.isArray(outputResult) ||
+                    (typeof outputResult === 'object' && !outputResult.filePath && !outputResult.destination) ||
+                    typeof outputResult === 'string'
+                )) {
+                    let content = outputResult;
+                    let ext = 'json';
+                    if (typeof outputResult !== 'string') {
+                        content = JSON.stringify(outputResult, null, 2);
+                    } else {
+                        const trimmed = outputResult.trim();
+                        if (trimmed.startsWith('<')) {
+                            ext = 'xml';
+                        } else {
+                            try {
+                                JSON.parse(trimmed);
+                            } catch {
+                                ext = 'txt';
+                            }
+                        }
+                    }
+                    const filenameBase = node.data?.label || `${node.type}_${node.id}`;
+                    const persistedPath = await saveFile(filenameBase, content, ext, execDir);
                     outputResult = { filePath: persistedPath };
                     console.log(`Node ${nodeId} output saved to ${persistedPath}`);
                 }
 
-                // If outputResult has .destination (e.g. database result metadata), we keep it as is.
-
                 executionResults.set(nodeId, outputResult);
 
-                // Capture Debug OUTPUTS
                 if (options?.debug) {
                     if (outputResult.filePath) {
                         await captureFileDebug(outputResult.filePath, nodeId, 'outputs');
                     } else {
-                        // Metadata
                         if (!debugData[nodeId]) debugData[nodeId] = { inputs: [], outputs: [] };
                         debugData[nodeId].outputs.push(truncate(outputResult));
                     }
                 }
 
-                // Add children
                 const children = outgoingEdges.get(nodeId) || [];
                 queue.push(...children);
 
@@ -250,19 +247,29 @@ export async function runPipeline(connectionId: string, inputFilePath: string, o
             await logPipelineEvent('Debug Data Captured', 'INFO', debugData);
         }
 
-        await db.query(`UPDATE pipeline_executions SET status = 'COMPLETED', completed_at = NOW() WHERE id = $1`, [executionId]);
+        const validOutputs = Object.fromEntries(executionResults);
+        await db.query(`UPDATE pipeline_executions SET status = 'COMPLETED', completed_at = NOW(), outputs = $2 WHERE id = $1`, [executionId, JSON.stringify(validOutputs)]);
         await logPipelineEvent('Pipeline execution completed successfully');
-        await logEvent(connectionId, pipeline.name, 'PIPELINE', 'SUCCESS', 'Pipeline executed successfully', { executionId });
+        await logEvent(connectionId, connectionName, 'PIPELINE', 'SUCCESS', 'Pipeline executed successfully', { executionId });
 
         return { success: true, executionId, debugData };
 
     } catch (error: any) {
         console.error('Pipeline failed:', error);
-        await db.query(`UPDATE pipeline_executions SET status = 'FAILED', completed_at = NOW() WHERE id = $1`, [executionId]);
+
+        const partialOutputs = Object.fromEntries(executionResults);
+        await db.query(`UPDATE pipeline_executions SET status = 'FAILED', completed_at = NOW(), outputs = $2 WHERE id = $1`, [executionId, JSON.stringify(partialOutputs)]);
+
         await logPipelineEvent(`Pipeline failed: ${error.message}`, 'ERROR');
-        await logEvent(connectionId, pipeline.name, 'PIPELINE', 'FAILURE', 'Pipeline execution failed', { error: error.message });
+        await logEvent(connectionId, connectionName, 'PIPELINE', 'FAILURE', 'Pipeline execution failed', { error: error.message });
         return { success: false, error: error.message };
     }
+}
+
+export async function runPipeline(pipelineId: string, inputFilePath: string | null | undefined, options?: { debug?: boolean }) {
+    const init = await initializePipelineExecution(pipelineId);
+    if (!init.success || !init.data) return { success: false, error: init.error };
+    return await executePipeline(init.data, inputFilePath, options);
 }
 
 function findInputData(nodeId: string, edges: any[], results: Map<string, any>) {

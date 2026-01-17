@@ -94,7 +94,14 @@ export async function syncConnection(connectionId: string) {
         // Trigger Pipeline Execution (Queued)
         try {
             const { runPipeline } = await import('./pipeline/orchestrator');
-            addJob(() => runPipeline(connectionId, filePath));
+            // Find pipeline for this connection
+            const { rows: pipeRows } = await db.query('SELECT id FROM pipelines WHERE connection_id = $1 ORDER BY created_at DESC LIMIT 1', [connectionId]);
+
+            if (pipeRows.length > 0) {
+                addJob(() => runPipeline(pipeRows[0].id, filePath));
+            } else {
+                console.log(`No pipeline found to trigger for connection ${connectionId}`);
+            }
         } catch (pipelineErr) {
             console.error('Failed to queue pipeline', pipelineErr);
         }

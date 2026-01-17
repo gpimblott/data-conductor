@@ -28,8 +28,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             return NextResponse.json({ error: 'No source data found. Please run Sync first.' }, { status: 400 });
         }
 
-        // 3. Run Pipeline
-        const result = await runPipeline(id, inputFilePath, { debug });
+        // 3. Find Pipeline ID
+        const { rows: pipeRows } = await db.query('SELECT id FROM pipelines WHERE connection_id = $1 ORDER BY created_at DESC LIMIT 1', [id]);
+        if (pipeRows.length === 0) {
+            return NextResponse.json({ error: 'No pipeline found for this connection' }, { status: 404 });
+        }
+        const pipelineId = pipeRows[0].id;
+
+        // 4. Run Pipeline
+        const result = await runPipeline(pipelineId, inputFilePath, { debug });
 
         if (result && result.success) {
             return NextResponse.json({

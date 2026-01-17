@@ -19,6 +19,7 @@
 import React, { useState, useEffect } from 'react';
 import { Node } from 'reactflow';
 import { X, Plus, Trash2 } from 'lucide-react';
+import SourceNodeConfig from './SourceNodeConfig';
 
 interface NodeConfigPanelProps {
     node: Node | null;
@@ -30,6 +31,7 @@ export default function NodeConfigPanel({ node, onClose, onUpdate }: NodeConfigP
     if (!node) return null;
 
     const isTransformNode = node.type === 'transform_json';
+    const isSourceNode = node.type === 'source';
     const isRestApiNode = node.type === 'rest_api';
     const isFileDestNode = node.type === 'file_destination';
     const isPostgresNode = node.type === 'postgres_destination';
@@ -72,6 +74,7 @@ export default function NodeConfigPanel({ node, onClose, onUpdate }: NodeConfigP
                 />
             </div>
 
+            {isSourceNode && <SourceNodeConfig node={node} onUpdate={onUpdate} />}
             {isTransformNode && <TransformConfig node={node} onUpdate={onUpdate} />}
             {isRestApiNode && <RestApiConfig node={node} onUpdate={onUpdate} />}
             {isFileDestNode && <FileDestConfig node={node} onUpdate={onUpdate} />}

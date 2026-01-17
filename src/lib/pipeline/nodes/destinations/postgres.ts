@@ -18,7 +18,9 @@
 
 import { NodeHandler } from '../registry';
 import { Client } from 'pg';
-// import { get } from 'lodash'; // Removed to avoid installing unused dep
+import { createJsonInputStream } from '../../streamUtils';
+
+// Simple deep get implementation if lodash not available
 
 // Simple deep get implementation if lodash not available
 function getPath(obj: any, path: string, defaultValue?: any) {
@@ -93,35 +95,23 @@ export const postgresDestinationHandler: NodeHandler = {
             };
 
             // Read File and Stream to DB
-            // Using JSONStream to parse output array from previous node
-            const fs = require('fs');
-            const JSONStream = require('JSONStream');
-
-            const fileStream = fs.createReadStream(filePath, { encoding: 'utf8' });
-            const parseStream = JSONStream.parse('*');
+            const dataStream = await createJsonInputStream(filePath);
 
             // We need to wait for stream to finish
             await new Promise<void>((resolve, reject) => {
-                fileStream.pipe(parseStream);
-
-                parseStream.on('data', async (item: any) => {
-                    // Pause stream to handle async DB insert? 
-                    // Postgres client might handle concurrency but let's be safe or just fire and forget might flood it.
-                    // Ideally we use a transform stream or careful await.
-                    // For now, simpler approach: buffering is handled by node streams somewhat, but 'data' event is fast.
-                    // Pausing is better.
-                    parseStream.pause();
+                dataStream.on('data', async (item: any) => {
+                    // Pause stream to handle async DB insert
+                    dataStream.pause();
                     try {
                         await processItem(item);
-                        parseStream.resume();
+                        dataStream.resume();
                     } catch (err) {
-                        parseStream.emit('error', err);
+                        dataStream.emit('error', err);
                     }
                 });
 
-                parseStream.on('end', () => resolve());
-                parseStream.on('error', (err: any) => reject(err));
-                fileStream.on('error', (err: any) => reject(err));
+                dataStream.on('end', () => resolve());
+                dataStream.on('error', (err: any) => reject(err));
             });
 
             console.log(`Postgres Destination: Inserted ${insertedCount} rows`);

@@ -1,19 +1,7 @@
+
 /*
  * DataConductor
  * Copyright (C) 2026
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 import React, { useCallback, useState, useRef, useEffect } from 'react';
@@ -34,20 +22,26 @@ import 'reactflow/dist/style.css';
 import PipelineSidebar from './PipelineSidebar';
 import StatusBadge from '../StatusBadge';
 import { SourceNode, RestApiNode, TransformJsonNode, DestinationNode, FileDestinationNode, PostgresDestinationNode, MysqlDestinationNode } from './CustomNodes';
-import { Connection as ConnectionType } from '@/types';
 import styles from './PipelineBuilder.module.css';
 import { SplitButton } from '@/components/ui/SplitButton';
 import { Dropdown, DropdownItem, DropdownSeparator } from '@/components/ui/Dropdown';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
-import { Download, Upload } from 'lucide-react';
+import { Download, Upload, History, Settings, Folder, X } from 'lucide-react';
 import { handleSignOut } from '@/lib/actions';
 import { VersionHistoryPanel } from './VersionHistoryPanel';
+import ExecutionHistoryPanel from './ExecutionHistoryPanel';
+import PipelineFilesPanel from './PipelineFilesPanel';
+import NodeConfigPanel from './NodeConfigPanel';
+import AlertModal from '../AlertModal';
+import ConfirmationModal from '../ConfirmationModal';
+import DebugResultModal from './DebugResultModal';
+import PipelineSettingsModal from './PipelineSettingsModal';
 
 const nodeTypes = {
     source: SourceNode,
     rest_api: RestApiNode,
     transform_json: TransformJsonNode,
-    destination: DestinationNode, // Generic/Neo4j
+    destination: DestinationNode,
     file_destination: FileDestinationNode,
     postgres_destination: PostgresDestinationNode,
     mysql_destination: MysqlDestinationNode,
@@ -55,31 +49,74 @@ const nodeTypes = {
 
 const getId = () => `dndnode_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
-import NodeConfigPanel from './NodeConfigPanel';
-import AlertModal from '../AlertModal';
-import ConfirmationModal from '../ConfirmationModal';
-import DebugResultModal from './DebugResultModal';
-import { History, ChevronDown } from 'lucide-react';
-import ExecutionHistoryPanel from './ExecutionHistoryPanel';
-
 interface Props {
-    connection: ConnectionType;
+    pipelineId: string;
     onClose: () => void;
-    onUpdateStatus?: (status: 'ACTIVE' | 'PAUSED') => void;
 }
 
-const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) => {
+const PipelineBuilderContent = ({ pipelineId, onClose }: Props) => {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
 
+    // Pipeline Metadata State
+    const [pipeline, setPipeline] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    // UI State
+    const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+    const [alertState, setAlertState] = useState<{ isOpen: boolean, title: string, message: string, type: 'success' | 'error' | 'info' }>({
+        isOpen: false, title: '', message: '', type: 'info'
+    });
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [isRunning, setIsRunning] = useState(false);
+    const [debugResult, setDebugResult] = useState<any>(null);
+    const [showHistory, setShowHistory] = useState(false);
+    const [showVersionHistory, setShowVersionHistory] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
+    const [showDataFiles, setShowDataFiles] = useState(false);
+
+    // Load Pipeline
+    useEffect(() => {
+        const fetchPipeline = async () => {
+            try {
+                const res = await fetch(`/api/pipelines/${pipelineId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setPipeline(data);
+
+                    if (data.flow_config) {
+                        const { nodes: savedNodes, edges: savedEdges } = data.flow_config;
+                        setNodes(savedNodes || []);
+                        setEdges(savedEdges || []);
+                    } else {
+                        // Default empty state or placeholder?
+                        // If new, maybe empty.
+                    }
+                } else {
+                    setAlertState({ isOpen: true, title: 'Error', message: 'Failed to load pipeline', type: 'error' });
+                }
+            } catch (error) {
+                console.error('Failed to load pipeline:', error);
+                setAlertState({ isOpen: true, title: 'Error', message: 'Failed to load pipeline', type: 'error' });
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (pipelineId) {
+            fetchPipeline();
+        }
+    }, [pipelineId, setNodes, setEdges]);
+
+
     const handleExport = useCallback(() => {
-        if (reactFlowInstance) {
+        if (reactFlowInstance && pipeline) {
             const flow = reactFlowInstance.toObject();
             const exportData = {
-                name: connection.name,
+                name: pipeline.name,
                 timestamp: new Date().toISOString(),
                 flowConfig: flow
             };
@@ -87,13 +124,13 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `pipeline-${connection.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.json`;
+            link.download = `pipeline-${(pipeline.name || 'export').replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.json`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
         }
-    }, [reactFlowInstance, connection.name]);
+    }, [reactFlowInstance, pipeline]);
 
     const handleImport = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -129,55 +166,6 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
     }, [reactFlowInstance, setNodes, setEdges]);
 
 
-    const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-    const [alertState, setAlertState] = useState<{ isOpen: boolean, title: string, message: string, type: 'success' | 'error' | 'info' }>({
-        isOpen: false, title: '', message: '', type: 'info'
-    });
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-    // New State for Running/Debugging
-    const [isRunning, setIsRunning] = useState(false);
-    const [isRunMenuOpen, setIsRunMenuOpen] = useState(false);
-    const [debugResult, setDebugResult] = useState<any>(null);
-    const [showHistory, setShowHistory] = useState(false);
-
-    const isActive = connection.status !== 'PAUSED';
-
-    // Load pipeline
-    React.useEffect(() => {
-        const fetchPipeline = async () => {
-            try {
-                const res = await fetch(`/api/connections/${connection.id}/pipeline`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data && data.flow_config) {
-                        const { nodes: savedNodes, edges: savedEdges } = data.flow_config;
-                        setNodes(savedNodes || []);
-                        setEdges(savedEdges || []);
-                        return; // Loaded successfully, skip default init
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to load pipeline:', error);
-            }
-
-            // Default initialization if no saved pipeline
-            if (nodes.length === 0) {
-                setNodes([
-                    {
-                        id: 'source-1',
-                        type: 'source',
-                        position: { x: 50, y: 250 },
-                        data: { label: connection.name, subLabel: connection.type, type: connection.type },
-                        draggable: false, // Lock source
-                    },
-                ]);
-            }
-        };
-
-        fetchPipeline();
-    }, [connection.id, connection.name, connection.type, setNodes, setEdges]); // Removed nodes.length dependency to allow loading
-
     const onConnect = useCallback(
         (params: Connection | Edge) => setEdges((eds) => addEdge({ ...params, markerEnd: { type: MarkerType.ArrowClosed } }, eds)),
         [setEdges]
@@ -194,6 +182,7 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
 
             const type = event.dataTransfer.getData('application/reactflow');
             const label = event.dataTransfer.getData('application/reactflow/label');
+            const connectionType = event.dataTransfer.getData('application/reactflow/connectionType');
 
             if (typeof type === 'undefined' || !type) {
                 return;
@@ -211,52 +200,51 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
                 data: { label: label },
             };
 
+            // Initialize Source Node with connectionType if provided
+            if (type === 'source' && connectionType) {
+                newNode.data = {
+                    ...newNode.data,
+                    connectionType,
+                    name: label,
+                    connectionConfig: {} // Empty config to start
+                };
+            }
+
             setNodes((nds) => nds.concat(newNode));
         },
         [reactFlowInstance, setNodes]
     );
 
     const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-        // Prevent opening for Source nodes if they don't need config,
-        // but for now let's allow all non-source nodes or all nodes.
-        if (node.type !== 'source') {
-            setSelectedNode(node);
-        } else {
-            setSelectedNode(null);
-        }
+        setSelectedNode(node);
     }, []);
 
     const onUpdateNode = useCallback((id: string, data: any) => {
         setNodes((nds) =>
             nds.map((node) => {
                 if (node.id === id) {
-                    // Update the local selected node too so the panel inputs don't lose focus/state weirdly
-                    // although updating the main flow state triggers access to 'node'.
                     return { ...node, data: { ...node.data, ...data } };
                 }
                 return node;
             })
         );
-        // Also update the selected node reference to keep the panel in sync immediately
         setSelectedNode((prev) => prev && prev.id === id ? { ...prev, data: { ...prev.data, ...data } } : prev);
     }, [setNodes]);
 
-    const onPaneClick = useCallback(() => {
-        setSelectedNode(null);
-    }, []);
-
     const handleSave = async (silent: boolean = false) => {
-        if (!reactFlowInstance) return;
+        if (!reactFlowInstance || !pipeline) return;
 
         const flow = reactFlowInstance.toObject();
         try {
-            const res = await fetch(`/api/connections/${connection.id}/pipeline`, {
-                method: 'POST',
+            const res = await fetch(`/api/pipelines/${pipelineId}`, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    name: `Pipeline for ${connection.name}`,
-                    flowConfig: flow
-                    // isActive is now managed on Connection level
+                    flowConfig: flow,
+                    // Preserve existing props unless we add UI to edit them here
+                    name: pipeline.name,
+                    description: pipeline.description,
+                    status: pipeline.status
                 })
             });
 
@@ -270,25 +258,19 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
                     type: 'success'
                 });
             }
+            // Update local state version if needed? No need.
         } catch (error) {
             console.error('Save error:', error);
-            setAlertState({
-                isOpen: true,
-                title: 'Error',
-                message: 'Failed to save pipeline.',
-                type: 'error'
-            });
+            setAlertState({ isOpen: true, title: 'Error', message: 'Failed to save pipeline.', type: 'error' });
         }
     };
 
     const handleRunPipeline = async (debug: boolean = false) => {
         setIsRunning(true);
-        setIsRunMenuOpen(false);
         try {
-            // Auto-save before running to ensure latest config is used
-            await handleSave(true);
+            await handleSave(true); // Auto-save
 
-            const res = await fetch(`/api/connections/${connection.id}/pipeline/run`, {
+            const res = await fetch(`/api/pipelines/${pipelineId}/run`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ debug })
@@ -298,7 +280,62 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
 
             if (data.success) {
                 if (debug) {
-                    setDebugResult(data);
+                    const executionId = data.executionId;
+
+                    // Poll function
+                    const checkStatus = async () => {
+                        try {
+                            const statusRes = await fetch(`/api/pipelines/${pipelineId}/executions/${executionId}`);
+                            if (statusRes.ok) {
+                                const execution = await statusRes.json();
+                                if (execution.status === 'COMPLETED' || execution.status === 'FAILED') {
+
+                                    // Extract Debug Data
+                                    let debugData = null;
+                                    if (execution.logs && Array.isArray(execution.logs)) {
+                                        const debugLog = execution.logs.find((l: any) => l.message === 'Debug Data Captured');
+                                        if (debugLog) {
+                                            debugData = debugLog.details;
+                                            if (typeof debugData === 'string') {
+                                                try { debugData = JSON.parse(debugData); } catch (e) { }
+                                            }
+                                        }
+                                    }
+
+                                    setDebugResult({
+                                        success: execution.status === 'COMPLETED',
+                                        executionId: execution.id,
+                                        error: execution.status === 'FAILED' ? 'Pipeline execution failed' : undefined,
+                                        debugData: debugData
+                                    });
+                                    setIsRunning(false);
+                                    return true; // Done
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Polling error', e);
+                        }
+                        return false; // Not done
+                    };
+
+                    // Start Polling
+                    const interval = setInterval(async () => {
+                        const done = await checkStatus();
+                        if (done) clearInterval(interval);
+                    }, 1000);
+
+                    // Timeout safety (2 mins)
+                    setTimeout(() => {
+                        clearInterval(interval);
+                        setIsRunning(prev => {
+                            if (prev) { // If still running
+                                setAlertState({ isOpen: true, title: 'Timeout', message: 'Debug execution timed out waiting for results.', type: 'error' });
+                                return false;
+                            }
+                            return prev;
+                        });
+                    }, 120000);
+
                 } else {
                     setAlertState({
                         isOpen: true,
@@ -306,6 +343,7 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
                         message: 'Pipeline execution started successfully.',
                         type: 'success'
                     });
+                    setIsRunning(false);
                 }
             } else {
                 setAlertState({
@@ -314,17 +352,11 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
                     message: data.error || 'Unknown error',
                     type: 'error'
                 });
+                setIsRunning(false);
             }
-
         } catch (error: any) {
             console.error('Run error:', error);
-            setAlertState({
-                isOpen: true,
-                title: 'Execution Error',
-                message: error.message,
-                type: 'error'
-            });
-        } finally {
+            setAlertState({ isOpen: true, title: 'Execution Error', message: error.message, type: 'error' });
             setIsRunning(false);
         }
     };
@@ -335,37 +367,24 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
 
     const confirmDelete = async () => {
         setShowDeleteConfirm(false);
-
         try {
-            const res = await fetch(`/api/connections/${connection.id}/pipeline`, {
+            const res = await fetch(`/api/pipelines/${pipelineId}`, {
                 method: 'DELETE'
             });
 
             if (!res.ok) throw new Error('Failed to delete');
 
-            setAlertState({
-                isOpen: true,
-                title: 'Deleted',
-                message: 'Pipeline deleted successfully!',
-                type: 'success'
-            });
-            setTimeout(() => onClose(), 1500); // Auto close after success
+            setAlertState({ isOpen: true, title: 'Deleted', message: 'Pipeline deleted successfully!', type: 'success' });
+            setTimeout(() => onClose(), 1500);
         } catch (error) {
             console.error('Delete error:', error);
-            setAlertState({
-                isOpen: true,
-                title: 'Error',
-                message: 'Failed to delete pipeline.',
-                type: 'error'
-            });
+            setAlertState({ isOpen: true, title: 'Error', message: 'Failed to delete pipeline.', type: 'error' });
         }
     };
 
-    const [showVersionHistory, setShowVersionHistory] = useState(false);
-
     const handleRestoreVersion = async (versionId: string) => {
         try {
-            const res = await fetch(`/api/connections/${connection.id}/pipeline/restore`, {
+            const res = await fetch(`/api/pipelines/${pipelineId}/restore`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ versionId })
@@ -383,8 +402,22 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
     };
 
     const toggleStatus = async () => {
-        if (onUpdateStatus) {
-            onUpdateStatus(isActive ? 'PAUSED' : 'ACTIVE');
+        if (!pipeline) return;
+        const newStatus = pipeline.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+
+        try {
+            const res = await fetch(`/api/pipelines/${pipelineId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            if (res.ok) {
+                setPipeline({ ...pipeline, status: newStatus });
+                setAlertState({ isOpen: true, title: 'Success', message: `Pipeline ${newStatus === 'ACTIVE' ? 'activated' : 'paused'}.`, type: 'success' });
+            }
+        } catch (error) {
+            setAlertState({ isOpen: true, title: 'Error', message: 'Failed to update status', type: 'error' });
         }
     };
 
@@ -392,11 +425,50 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
         setDebugResult({
             success: execution.status === 'COMPLETED',
             executionId: execution.id,
-            error: execution.status === 'FAILED' ? 'Pipeline execution failed' : undefined, // Simplification, ideally we find the error in logs or store it better
+            error: execution.status === 'FAILED' ? 'Pipeline execution failed' : undefined,
             debugData: debugData
         });
-        setShowHistory(false); // Close history panel to show debug panel
+        setShowHistory(false);
     };
+
+    const handleSaveSettings = async (id: string, data: any) => {
+        try {
+            const res = await fetch(`/api/pipelines/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (!res.ok) throw new Error('Failed to update settings');
+
+            setPipeline((prev: any) => ({ ...prev, ...data }));
+            setAlertState({ isOpen: true, title: 'Success', message: 'Pipeline settings saved!', type: 'success' });
+        } catch (error) {
+            console.error('Settings save error:', error);
+            setAlertState({ isOpen: true, title: 'Error', message: 'Failed to update settings.', type: 'error' });
+            throw error;
+        }
+    };
+
+    if (loading) {
+        return <div style={{ background: '#0a0a0a', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>Loading Pipeline...</div>;
+    }
+
+    if (!pipeline) {
+        return <div style={{ background: '#0a0a0a', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>Pipeline Not Found</div>;
+    }
+
+    const isActive = pipeline.status === 'ACTIVE';
+
+    // Breadcrumb logic: Use pipeline name
+    // Dashboard -> Pipelines -> [Name]
+    const breadcrumbs = [
+        { label: 'Dashboard', href: '/' },
+        { label: 'Pipelines', href: '/pipelines' },
+        { label: pipeline.name || 'Untitled Pipeline', href: `/pipelines/${pipelineId}` },
+        { label: 'Edit' }
+    ];
+
 
     return (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100, display: 'flex', flexDirection: 'column', background: '#0a0a0a' }}>
@@ -415,28 +487,21 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
 
                     <div style={{ width: '1px', height: '24px', background: '#404040' }}></div>
 
-                    <Breadcrumb
-                        items={[
-                            { label: 'Dashboard', href: '/' },
-                            { label: connection.name, href: `/connections/${connection.id}` },
-                            { label: 'Pipeline Builder' }
-                        ]}
-                    />
+                    <Breadcrumb items={breadcrumbs} />
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                     <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json" onChange={handleImport} />
 
-                    {/* Run / Schedule Split Button */}
                     <SplitButton
-                        label={isRunning ? "Running..." : "▶ Run Sync"}
+                        label={isRunning ? "Running..." : "▶ Run Pipeline"}
                         variant="primary"
                         onClick={() => handleRunPipeline(false)}
                         isLoading={isRunning}
                         disabled={isRunning}
                     >
                         <DropdownItem onClick={() => handleRunPipeline(false)} icon="▶">
-                            Run Sync
+                            Run Pipeline
                         </DropdownItem>
                         <DropdownItem onClick={() => handleRunPipeline(true)} icon="🐞">
                             Run Debug
@@ -446,7 +511,7 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
                             onClick={toggleStatus}
                             icon={isActive ? "⏸" : "▶"}
                         >
-                            {isActive ? 'Disable Schedule' : 'Enable Schedule'}
+                            {isActive ? 'Pause Pipeline' : 'Activate Pipeline'}
                         </DropdownItem>
                     </SplitButton>
 
@@ -484,7 +549,13 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
                             Actions ▾
                         </button>
                     }>
-                        <DropdownItem onClick={() => setShowHistory(!showHistory)} icon="🕒">
+                        <DropdownItem onClick={() => setShowSettings(true)} icon={<Settings size={14} />}>
+                            Pipeline Settings
+                        </DropdownItem>
+                        <DropdownItem onClick={() => { setShowDataFiles(!showDataFiles); setShowHistory(false); setShowVersionHistory(false); }} icon={<Folder size={14} />}>
+                            {showDataFiles ? 'Hide Data Files' : 'View Data Files'}
+                        </DropdownItem>
+                        <DropdownItem onClick={() => { setShowHistory(!showHistory); setShowDataFiles(false); setShowVersionHistory(false); }} icon="🕒">
                             {showHistory ? 'Hide Run History' : 'View Run History'}
                         </DropdownItem>
                         <DropdownItem onClick={() => setShowVersionHistory(true)} icon="🔖">
@@ -540,7 +611,7 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
                         onDrop={onDrop}
                         onDragOver={onDragOver}
                         onNodeClick={onNodeClick}
-                        onPaneClick={onPaneClick}
+                        onPaneClick={() => setSelectedNode(null)}
                         nodeTypes={nodeTypes}
                         fitView
                         fitViewOptions={{ padding: 0.5, maxZoom: 1 }}
@@ -559,16 +630,39 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
 
                 {showHistory && (
                     <ExecutionHistoryPanel
-                        connectionId={connection.id}
+                        pipelineId={pipelineId}
                         onClose={() => setShowHistory(false)}
                         onViewDebug={handleViewDebugHistory}
                     />
                 )}
 
+                {showDataFiles && (
+                    <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        right: 0,
+                        bottom: 0,
+                        width: '400px',
+                        background: '#171717',
+                        borderLeft: '1px solid #262626',
+                        padding: '1.5rem',
+                        overflowY: 'auto',
+                        zIndex: 15
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #333', paddingBottom: '1rem' }}>
+                            <h3 style={{ margin: 0, color: '#e5e5e5', fontSize: '1.1rem', fontWeight: 600 }}>Data Files</h3>
+                            <button onClick={() => setShowDataFiles(false)} style={{ background: 'none', border: 'none', color: '#a3a3a3', cursor: 'pointer' }}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <PipelineFilesPanel pipelineId={pipelineId} />
+                    </div>
+                )}
+
                 {showVersionHistory && (
                     <VersionHistoryPanel
                         onClose={() => setShowVersionHistory(false)}
-                        connectionId={connection.id}
+                        pipelineId={pipelineId}
                         onRestore={handleRestoreVersion}
                     />
                 )}
@@ -583,6 +677,12 @@ const PipelineBuilderContent = ({ connection, onClose, onUpdateStatus }: Props) 
             </div>
 
             {/* Modals */}
+            <PipelineSettingsModal
+                isOpen={showSettings}
+                onClose={() => setShowSettings(false)}
+                pipeline={pipeline}
+                onSave={handleSaveSettings}
+            />
             {showDeleteConfirm && (
                 <ConfirmationModal
                     isOpen={showDeleteConfirm}

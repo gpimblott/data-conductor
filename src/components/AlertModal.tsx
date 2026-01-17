@@ -29,9 +29,12 @@ interface Props {
     message: string;
     type?: 'success' | 'error' | 'info';
     onClose: () => void;
+    onConfirm?: () => void;
+    confirmText?: string;
+    cancelText?: string;
 }
 
-export default function AlertModal({ isOpen, title, message, type = 'info', onClose }: Props) {
+export default function AlertModal({ isOpen, title, message, type = 'info', onClose, onConfirm, confirmText = 'Confirm', cancelText = 'Cancel' }: Props) {
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -65,20 +68,56 @@ export default function AlertModal({ isOpen, title, message, type = 'info', onCl
                     {message}
                 </div>
                 <div className={styles.footer}>
-                    <button
-                        onClick={onClose}
-                        style={{
-                            padding: '0.5rem 1.5rem',
-                            background: '#262626',
-                            border: '1px solid #404040',
-                            color: '#e5e5e5',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontWeight: 500
-                        }}
-                    >
-                        Close
-                    </button>
+                    {onConfirm ? (
+                        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={onClose}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    background: 'transparent',
+                                    border: '1px solid #404040',
+                                    color: '#a3a3a3',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontWeight: 500
+                                }}
+                            >
+                                {cancelText}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    onConfirm();
+                                    onClose();
+                                }}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    background: '#ef4444',
+                                    border: 'none',
+                                    color: '#fff',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontWeight: 500
+                                }}
+                            >
+                                {confirmText}
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={onClose}
+                            style={{
+                                padding: '0.5rem 1.5rem',
+                                background: '#262626',
+                                border: '1px solid #404040',
+                                color: '#e5e5e5',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontWeight: 500
+                            }}
+                        >
+                            Close
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

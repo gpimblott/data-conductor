@@ -17,6 +17,7 @@
  */
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { handleSignOut } from '@/lib/actions';
 import styles from './Header.module.css';
 
@@ -40,7 +41,9 @@ export default async function Header() {
                     <h1>DataConductor</h1>
                     <div id="header-breadcrumb-portal"></div>
                 </div>
-                <nav>
+
+
+                <div className={styles.userMenu}>
                     {session?.user && (
                         <form action={handleSignOut}>
                             <button
@@ -59,7 +62,7 @@ export default async function Header() {
                             </button>
                         </form>
                     )}
-                </nav>
+                </div>
             </div>
         </header>
     );
