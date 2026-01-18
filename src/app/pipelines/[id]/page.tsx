@@ -120,7 +120,7 @@ export default function PipelineDetailPage() {
         setAlertState({
             isOpen: true,
             title: 'Confirm Purge',
-            message: 'This will delete data files for all but the last 5 runs. Execution logs will be preserved. Do you want to continue?',
+            message: 'This will permanently delete all logs and data files for all runs except the last 5. This action cannot be undone. Do you want to continue?',
             type: 'info',
             onConfirm: executePurge,
             confirmText: 'Purge Files',

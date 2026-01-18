@@ -18,8 +18,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         }
 
         // Get executions to purge (everything after the 5th one)
-        // Filter out those already purged
-        const executionsToPurge = rows.slice(5).filter((exec: any) => !exec.purged);
+        const executionsToPurge = rows.slice(5);
         let purgedCount = 0;
 
         for (const exec of executionsToPurge) {
@@ -30,8 +29,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
                 // Delete the directory and its contents
                 await deleteDirectory(dirPath);
 
-                // Mark as purged
-                await db.query('UPDATE pipeline_executions SET purged = TRUE WHERE id = $1', [exec.id]);
+                // DELETE the execution record entirely
+                await db.query('DELETE FROM pipeline_executions WHERE id = $1', [exec.id]);
                 purgedCount++;
             } catch (err) {
                 console.error(`Failed to purge execution ${exec.id}:`, err);
@@ -40,7 +39,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         }
 
         return NextResponse.json({
-            message: `Purged files for ${purgedCount} executions`,
+            message: `Deleted ${purgedCount} old executions and their files`,
             count: purgedCount
         });
 
