@@ -18,7 +18,7 @@ export const openaiHandler: NodeHandler = {
             }
 
             const filePath = inputRef.filePath;
-            const { endpoint, apiKey, model, prompt, temperature = 0.7 } = ctx.config;
+            const { endpoint, apiKey, model, prompt, temperature = 0.7, max_tokens, jsonMode } = ctx.config;
 
             if (!endpoint) throw new Error('OpenAI Endpoint URL is required');
             if (!model) throw new Error('Model name is required');
@@ -46,14 +46,17 @@ export const openaiHandler: NodeHandler = {
                             payload = {
                                 model: model,
                                 messages: [{ role: 'user', content: interpolatedPrompt }],
-                                temperature: Number(temperature)
+                                temperature: Number(temperature),
+                                ...(max_tokens ? { max_tokens: Number(max_tokens) } : {}),
+                                ...(jsonMode ? { response_format: { type: 'json_object' } } : {})
                             };
                         } else {
                             // Legacy/Text Completion API
                             payload = {
                                 model: model,
                                 prompt: interpolatedPrompt,
-                                temperature: Number(temperature)
+                                temperature: Number(temperature),
+                                ...(max_tokens ? { max_tokens: Number(max_tokens) } : {})
                             };
                         }
 

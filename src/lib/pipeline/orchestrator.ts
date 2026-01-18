@@ -187,7 +187,16 @@ export async function executePipeline(initData: any, inputFilePath: string | nul
 
                 if (outputResult && (outputResult instanceof Readable || typeof outputResult.pipe === 'function')) {
                     const ext = 'json';
-                    const serializedStream = outputResult.pipe(JSONStream.stringify());
+                    const jsonStream = JSONStream.stringify();
+
+                    // Propagate errors from the source stream to the transformer
+                    outputResult.on('error', (err: any) => {
+                        console.error(`Stream error in node ${nodeId}:`, err);
+                        // Explicitly emit error to ensure listeners (like saveFile) catch it
+                        jsonStream.emit('error', err);
+                    });
+
+                    const serializedStream = outputResult.pipe(jsonStream);
                     // Use label for filename if available, otherwise nodeId
                     const filenameBase = node.data?.label || `${node.type}_${node.id}`;
                     const persistedPath = await saveFile(filenameBase, serializedStream, ext, execDir);

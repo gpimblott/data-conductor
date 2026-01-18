@@ -405,7 +405,7 @@ function OpenAIConfig({ node, onUpdate }: { node: Node, onUpdate: (id: string, d
                 />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
                 <div>
                     <label style={{ display: 'block', color: '#a3a3a3', marginBottom: '0.25rem', fontSize: '0.8rem' }}>Model</label>
                     <input
@@ -424,6 +424,17 @@ function OpenAIConfig({ node, onUpdate }: { node: Node, onUpdate: (id: string, d
                         max="2"
                         value={node.data.temperature ?? 0.7}
                         onChange={(e) => onUpdate(node.id, { ...node.data, temperature: parseFloat(e.target.value) })}
+                        style={{ width: '100%', padding: '0.5rem', background: '#262626', border: '1px solid #404040', color: '#fff', borderRadius: '4px' }}
+                    />
+                </div>
+                <div>
+                    <label style={{ display: 'block', color: '#a3a3a3', marginBottom: '0.25rem', fontSize: '0.8rem' }}>Max Tokens</label>
+                    <input
+                        type="number"
+                        min="1"
+                        value={node.data.max_tokens || ''}
+                        onChange={(e) => onUpdate(node.id, { ...node.data, max_tokens: parseInt(e.target.value) })}
+                        placeholder="2048"
                         style={{ width: '100%', padding: '0.5rem', background: '#262626', border: '1px solid #404040', color: '#fff', borderRadius: '4px' }}
                     />
                 </div>
@@ -462,14 +473,25 @@ function OpenAIConfig({ node, onUpdate }: { node: Node, onUpdate: (id: string, d
                 />
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                    type="checkbox"
-                    id="parseJson"
-                    checked={node.data.parseJsonResponse || false}
-                    onChange={(e) => onUpdate(node.id, { ...node.data, parseJsonResponse: e.target.checked })}
-                />
-                <label htmlFor="parseJson" style={{ color: '#e5e5e5', fontSize: '0.9rem' }}>Parse JSON from response</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <input
+                        type="checkbox"
+                        id="parseJson"
+                        checked={node.data.parseJsonResponse || false}
+                        onChange={(e) => onUpdate(node.id, { ...node.data, parseJsonResponse: e.target.checked })}
+                    />
+                    <label htmlFor="parseJson" style={{ color: '#e5e5e5', fontSize: '0.9rem' }}>Parse JSON from response (Client-side)</label>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <input
+                        type="checkbox"
+                        id="jsonMode"
+                        checked={node.data.jsonMode || false}
+                        onChange={(e) => onUpdate(node.id, { ...node.data, jsonMode: e.target.checked })}
+                    />
+                    <label htmlFor="jsonMode" style={{ color: '#e5e5e5', fontSize: '0.9rem' }}>Enforce JSON Object (API Mode)</label>
+                </div>
             </div>
         </div>
     );
