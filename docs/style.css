@@ -229,7 +229,8 @@ a {
 }
 
 .mockup-window {
-    aspect-ratio: 16/9;
+    width: 100%;
+    /* aspect-ratio removed to allow content to define height */
 }
 
 .window-controls {
@@ -271,9 +272,21 @@ a {
 
 .hero-img {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    height: auto;
+    object-fit: contain;
     /* Hidden until loaded with valid src - Removed to ensure visibility */
+}
+
+/* Hero Image Side-by-Side */
+.hero-image-row {
+    display: flex;
+    width: 100%;
+}
+
+.hero-image-row .hero-img {
+    width: 50%;
+    height: auto;
+    object-fit: contain;
 }
 
 /* Placeholders */
@@ -423,15 +436,22 @@ a {
     flex: 1;
     aspect-ratio: 4/3;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    /* keep flex */
+    flex-direction: column;
+    /* stack controls and image */
+    align-items: stretch;
+    /* stretch to full width */
+    justify-content: flex-start;
+    /* start from top */
     background: #0f0f0f;
 }
 
 .showcase-visual img {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    flex: 1;
+    /* take remaining height */
+    object-fit: contain;
+    overflow: hidden;
 }
 
 /* CTA */

@@ -49,7 +49,15 @@ export async function GET(
         const isDownload = downloadStr === 'true';
 
         if (!fs.existsSync(filePath)) {
-            return NextResponse.json({ error: 'File not found on server' }, { status: 404 });
+            // Try resolving to absolute path just in case
+            const absPath = path.resolve(filePath);
+            if (fs.existsSync(absPath)) {
+                // If absolute path exists, let's use it
+                // console.log(`Found file at absolute path: ${absPath}`);
+            } else {
+                console.error(`File not found on server. Checked path: ${filePath} and ${absPath}`);
+                return NextResponse.json({ error: `File not found on server at ${filePath}` }, { status: 404 });
+            }
         }
 
         let content;

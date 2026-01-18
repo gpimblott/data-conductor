@@ -495,14 +495,14 @@ const PipelineBuilderContent = ({ pipelineId, onClose }: Props) => {
                     <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json" onChange={handleImport} />
 
                     <SplitButton
-                        label={isRunning ? "Running..." : "▶ Run Pipeline"}
+                        label={isRunning ? "Running..." : "▶ Run Now"}
                         variant="primary"
                         onClick={() => handleRunPipeline(false)}
                         isLoading={isRunning}
                         disabled={isRunning}
                     >
                         <DropdownItem onClick={() => handleRunPipeline(false)} icon="▶">
-                            Run Pipeline
+                            Run Now
                         </DropdownItem>
                         <DropdownItem onClick={() => handleRunPipeline(true)} icon="🐞">
                             Run Debug
@@ -599,7 +599,7 @@ const PipelineBuilderContent = ({ pipelineId, onClose }: Props) => {
                 </div>
             </div>
 
-            <div style={{ display: 'flex', flexGrow: 1, position: 'relative' }}>
+            <div style={{ display: 'flex', flexGrow: 1, position: 'relative', overflow: 'hidden' }}>
                 <PipelineSidebar />
                 <div className={`reactflow-wrapper ${styles.pipelineWrapper}`} ref={reactFlowWrapper} style={{ flexGrow: 1, height: '100%', borderLeft: '1px solid #262626' }}>
                     <ReactFlow

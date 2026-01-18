@@ -5,7 +5,7 @@ import path from 'path';
 import { Readable } from 'stream';
 
 const STORAGE_TYPE = process.env.STORAGE_TYPE || 'local';
-const DATA_DIR = process.env.DATA_DIR || './data';
+const DATA_DIR = path.resolve(process.env.DATA_DIR || './data');
 const S3_BUCKET = process.env.AWS_S3_BUCKET || '';
 const S3_REGION = process.env.AWS_REGION || 'us-east-1';
 
@@ -17,18 +17,29 @@ function sanitizeName(name: string): string {
 }
 
 /**
- * Creates a directory for a specific pipeline execution.
+ * Gets the directory path for a specific pipeline execution.
+ * Returns absolute path for local storage.
  */
-export function createExecutionDirectory(executionId: string): string {
+export function getExecutionDirectory(executionId: string): string {
     if (STORAGE_TYPE === 's3') {
         return `executions/${executionId}`;
     } else {
-        const dirPath = path.join(DATA_DIR, 'executions', executionId);
+        return path.join(DATA_DIR, 'executions', executionId);
+    }
+}
+
+/**
+ * Creates a directory for a specific pipeline execution.
+ */
+export function createExecutionDirectory(executionId: string): string {
+    const dirPath = getExecutionDirectory(executionId);
+    if (STORAGE_TYPE !== 's3') {
         if (!fs.existsSync(dirPath)) {
             fs.mkdirSync(dirPath, { recursive: true });
         }
-        return path.resolve(dirPath);
+        return dirPath;
     }
+    return dirPath;
 }
 
 /**

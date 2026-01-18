@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { X, PlayCircle, AlertCircle, CheckCircle, Clock, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { X, PlayCircle, AlertCircle, CheckCircle, Clock, ChevronLeft, ChevronRight, FileText, Trash2, Folder, Bug, ScrollText } from 'lucide-react';
 import LogViewerModal from './LogViewerModal';
 import ExecutionFilesModal from './ExecutionFilesModal';
+import ConfirmationModal from '../ConfirmationModal';
 
 interface Execution {
     id: string;
@@ -25,6 +26,7 @@ export default function ExecutionHistoryPanel({ pipelineId, onClose, onViewDebug
     const [loading, setLoading] = useState(true);
     const [logsToView, setLogsToView] = useState<{ logs: any[], executionId: string } | null>(null);
     const [filesToView, setFilesToView] = useState<{ outputs: any, executionId: string, createdAt: string } | null>(null);
+    const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean, executionId: string | null }>({ isOpen: false, executionId: null });
 
     // Pagination State
     const [page, setPage] = useState(1);
@@ -72,6 +74,33 @@ export default function ExecutionHistoryPanel({ pipelineId, onClose, onViewDebug
         return new Date(dateStr).toLocaleString();
     };
 
+    const handleDeleteClick = (executionId: string) => {
+        setDeleteConfirmation({ isOpen: true, executionId });
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteConfirmation.executionId) return;
+
+        const executionId = deleteConfirmation.executionId;
+        setDeleteConfirmation({ isOpen: false, executionId: null });
+
+        try {
+            const res = await fetch(`/api/pipelines/${pipelineId}/executions/${executionId}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                // Refresh list
+                fetchExecutions();
+            } else {
+                alert('Failed to delete execution');
+            }
+        } catch (error) {
+            console.error('Delete error', error);
+            alert('Failed to delete execution');
+        }
+    };
+
     const sidebarStyle: React.CSSProperties = {
         position: 'absolute',
         top: 0,
@@ -95,6 +124,21 @@ export default function ExecutionHistoryPanel({ pipelineId, onClose, onViewDebug
         background: 'transparent',
         display: 'flex',
         flexDirection: 'column'
+    };
+
+    const iconButtonStyle = {
+        padding: '0.4rem',
+        background: 'transparent',
+        border: '1px solid #404040',
+        color: '#a3a3a3',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'all 0.2s',
+        width: '28px',
+        height: '28px'
     };
 
     return (
@@ -155,21 +199,12 @@ export default function ExecutionHistoryPanel({ pipelineId, onClose, onViewDebug
                                         {hasFiles(exec.outputs) && (
                                             <button
                                                 onClick={() => setFilesToView({ outputs: exec.outputs, executionId: exec.id, createdAt: exec.started_at })}
-                                                title="View Data Files"
-                                                style={{
-                                                    padding: '0.4rem',
-                                                    background: '#171717',
-                                                    border: '1px solid #404040',
-                                                    color: '#a3a3a3',
-                                                    borderRadius: '4px',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontSize: '0.75rem'
-                                                }}
+                                                title="View Output Files"
+                                                style={iconButtonStyle}
+                                                onMouseEnter={(e) => { e.currentTarget.style.background = '#262626'; e.currentTarget.style.color = '#e5e5e5'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#a3a3a3'; }}
                                             >
-                                                Files
+                                                <Folder size={14} />
                                             </button>
                                         )}
 
@@ -177,36 +212,32 @@ export default function ExecutionHistoryPanel({ pipelineId, onClose, onViewDebug
                                             <button
                                                 onClick={() => onViewDebug(exec, debugData)}
                                                 title="View Debug Data"
-                                                style={{
-                                                    padding: '0.4rem',
-                                                    background: '#3b82f6',
-                                                    color: '#fff',
-                                                    border: 'none',
-                                                    borderRadius: '4px',
-                                                    cursor: 'pointer',
-                                                    fontSize: '0.75rem',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }}
+                                                style={{ ...iconButtonStyle, borderColor: '#3b82f6', color: '#3b82f6' }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                                             >
-                                                Debug
+                                                <Bug size={14} />
                                             </button>
                                         )}
 
                                         <button
                                             onClick={() => setLogsToView({ logs: exec.logs, executionId: exec.id })}
-                                            title="View Logs"
-                                            style={{
-                                                padding: '0.4rem',
-                                                background: '#171717',
-                                                border: '1px solid #404040',
-                                                color: '#a3a3a3',
-                                                borderRadius: '4px',
-                                                cursor: 'pointer'
-                                            }}
+                                            title="View Execution Logs"
+                                            style={iconButtonStyle}
+                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#262626'; e.currentTarget.style.color = '#e5e5e5'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#a3a3a3'; }}
                                         >
-                                            Logs
+                                            <ScrollText size={14} />
+                                        </button>
+
+                                        <button
+                                            onClick={() => handleDeleteClick(exec.id)}
+                                            title="Delete Run"
+                                            style={{ ...iconButtonStyle, borderColor: '#404040', color: '#ef4444' }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#262626'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                        >
+                                            <Trash2 size={14} />
                                         </button>
                                     </div>
                                 </div>
@@ -286,6 +317,17 @@ export default function ExecutionHistoryPanel({ pipelineId, onClose, onViewDebug
                     createdAt={filesToView.createdAt}
                 />
             )}
+
+            {/* Delete Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={deleteConfirmation.isOpen}
+                title="Delete Run"
+                message="Are you sure you want to delete this run? This will permanently remove all associated logs and output files. This action cannot be undone."
+                onConfirm={confirmDelete}
+                onCancel={() => setDeleteConfirmation({ isOpen: false, executionId: null })}
+                confirmText="Delete"
+                cancelText="Cancel"
+            />
         </div>
     );
 }

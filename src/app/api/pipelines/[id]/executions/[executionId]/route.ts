@@ -31,3 +31,36 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         return NextResponse.json({ error: 'Failed to get execution details' }, { status: 500 });
     }
 }
+
+import { getExecutionDirectory } from '@/lib/storage';
+
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string, executionId: string }> }) {
+    try {
+        const { id, executionId } = await params;
+        const fs = require('fs');
+
+        // 1. Delete Artifacts (Files)
+        // Use shared helper to ensure we target the exact same directory as creation
+        const executionDir = getExecutionDirectory(executionId);
+
+        if (fs.existsSync(executionDir)) {
+            try {
+                fs.rmSync(executionDir, { recursive: true, force: true });
+            } catch (err) {
+                console.error('Failed to delete execution directory:', err);
+                // Continue to delete DB record even if file deletion fails partially
+            }
+        }
+
+        // 2. Delete Database Entry
+        await db.query(
+            `DELETE FROM pipeline_executions WHERE id = $1 AND pipeline_id = $2`,
+            [executionId, id]
+        );
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error('Failed to delete execution:', error);
+        return NextResponse.json({ error: 'Failed to delete execution' }, { status: 500 });
+    }
+}

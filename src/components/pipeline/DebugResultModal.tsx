@@ -14,6 +14,11 @@ export default function DebugResultModal({ isOpen, onClose, results, executionId
     if (!isOpen) return null;
 
     const getNodeName = (id: string) => {
+        // First try to check if the result itself has the label (new format)
+        if (results?.debugData?.[id]?.label) {
+            return results.debugData[id].label;
+        }
+        // Fallback to current nodes default
         const node = nodes.find(n => n.id === id);
         return node?.data?.label || id;
     };

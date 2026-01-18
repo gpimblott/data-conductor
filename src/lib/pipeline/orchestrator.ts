@@ -75,7 +75,7 @@ export async function initializePipelineExecution(pipelineId: string): Promise<{
 export async function executePipeline(initData: any, inputFilePath: string | null | undefined, options?: { debug?: boolean }) {
     const { executionId, nodes, edges, connectionId, connectionName } = initData;
     const logs: any[] = [];
-    const debugData: Record<string, { inputs: any[], outputs: any[] }> = {};
+    const debugData: Record<string, { inputs: any[], outputs: any[], label?: string }> = {};
     const executionResults = new Map<string, any>();
 
     const logPipelineEvent = async (message: string, level: 'INFO' | 'ERROR' = 'INFO', details?: any) => {
@@ -94,7 +94,10 @@ export async function executePipeline(initData: any, inputFilePath: string | nul
 
     const captureFileDebug = async (filePath: string, nodeId: string, type: 'inputs' | 'outputs') => {
         if (!options?.debug) return;
-        if (!debugData[nodeId]) debugData[nodeId] = { inputs: [], outputs: [] };
+        if (!debugData[nodeId]) {
+            const node = nodes.find((n: any) => n.id === nodeId);
+            debugData[nodeId] = { inputs: [], outputs: [], label: node?.data?.label || nodeId };
+        }
 
         try {
             if (fs.existsSync(filePath)) {
@@ -236,7 +239,10 @@ export async function executePipeline(initData: any, inputFilePath: string | nul
                     if (outputResult.filePath) {
                         await captureFileDebug(outputResult.filePath, nodeId, 'outputs');
                     } else {
-                        if (!debugData[nodeId]) debugData[nodeId] = { inputs: [], outputs: [] };
+                        if (!debugData[nodeId]) {
+                            const node = nodes.find((n: any) => n.id === nodeId);
+                            debugData[nodeId] = { inputs: [], outputs: [], label: node?.data?.label || nodeId };
+                        }
                         debugData[nodeId].outputs.push(truncate(outputResult));
                     }
                 }
