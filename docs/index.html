@@ -4,30 +4,210 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DataConductor - Coming Soon</title>
+    <title>DataConductor | Modern Data Pipeline Orchestration</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <link rel="icon" type="image/png" href="logo.png">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
 <body>
-    <header>
-        <div class="logo-container">
-            <img src="logo.png" alt="DataConductor Logo" class="logo-img">
-            <span class="logo-text">DataConductor</span>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <div class="logo">
+                <img src="../docs/logo.png" alt="DataConductor Logo" onerror="this.style.display='none'">
+                <span>DataConductor</span>
+            </div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#showcase">Interface</a>
+                <a href="https://github.com/gpimblott/data-conductor" class="btn btn-primary">
+                    <i data-lucide="github"></i> View on GitHub
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="container hero-content">
+            <div class="badge">Open Source Data Orchestration</div>
+            <h1>Control Your Data <br><span class="gradient-text">Like a Symphony</span></h1>
+            <p class="hero-sub">
+                Build, monitor, and orchestrate complex data pipelines with an intuitive visual node editor.
+                Say goodbye to fragile scripts and hello to robust, scalable data flows.
+            </p>
+            <div class="hero-actions">
+                <a href="#get-started" class="btn btn-large btn-glow">Get Started</a>
+                <a href="#showcase" class="btn btn-large btn-outline">See it in Action</a>
+            </div>
+        </div>
+
+        <div class="hero-image-container">
+            <div class="glass-panel mockup-window">
+                <div class="window-controls">
+                    <span class="dot red"></span>
+                    <span class="dot yellow"></span>
+                    <span class="dot green"></span>
+                </div>
+                <div class="mockup-content">
+                    <!-- Placeholder for Hero Screenshot -->
+                    <div class="placeholder-box">
+                        <i data-lucide="layout-template" size="64"></i>
+                        <span>Pipeline Builder UI Placeholder</span>
+                        <p class="placeholder-caption">Replace with 'pipeline_builder_hero.png'</p>
+                    </div>
+                    <!-- Image tag to use once image is ready -->
+                    <img src="images/pipeline_ui_mockup.png" alt="DataConductor Interface" class="hero-img"
+                        onerror="this.style.display='none'">
+                </div>
+            </div>
+            <div class="glow-bg"></div>
         </div>
     </header>
 
-    <main>
-        <div class="glow"></div>
-        <div class="pill">Coming Soon</div>
-        <h1>Orchestrate Your Data</h1>
-        <p class="tagline">The modern platform for connecting, transforming, and synchronising your data pipelines with
-            precision.</p>
-    </main>
+    <!-- Features Grid -->
+    <section id="features" class="features-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Why DataConductor?</h2>
+                <p>Built for developers who demand control and visibility.</p>
+            </div>
 
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="icon-box">
+                        <i data-lucide="shuffle"></i>
+                    </div>
+                    <h3>Visual Pipeline Builder</h3>
+                    <p>Drag-and-drop node editor to design complex logic flows without writing boilerplate code.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon-box">
+                        <i data-lucide="activity"></i>
+                    </div>
+                    <h3>Real-time Monitoring</h3>
+                    <p>Watch executions live. Detailed logs, debug outputs for every node, and instant error alerts.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon-box">
+                        <i data-lucide="database"></i>
+                    </div>
+                    <h3>Universal Connectivity</h3>
+                    <p>Connect to PostgreSQL, MySQL, RSS, REST APIs, and local files with ease.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon-box">
+                        <i data-lucide="zap"></i>
+                    </div>
+                    <h3>High Performance</h3>
+                    <p>Stream-based processing ensures low memory footprint even for massive datasets.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon-box">
+                        <i data-lucide="refresh-cw"></i>
+                    </div>
+                    <h3>Resilient Scheduling</h3>
+                    <p>Built-in cron scheduling and reliable retries keep your data moving on time, every time.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon-box">
+                        <i data-lucide="shield"></i>
+                    </div>
+                    <h3>Secure & Local</h3>
+                    <p>Self-hosted and open source. Your data never leaves your infrastructure.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Showcase Section -->
+    <section id="showcase" class="showcase-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Designed for Productivity</h2>
+                <p>A premium user interface that makes data engineering a joy.</p>
+            </div>
+
+            <div class="showcase-row">
+                <div class="showcase-text">
+                    <h3>Execution History & Debugging</h3>
+                    <p>Never fly blind again. Inspect inputs and outputs for every single node execution. Trace data
+                        lineage and spot bottlenecks instantly with our granular execution viewer.</p>
+                    <ul class="feature-list">
+                        <li><i data-lucide="check"></i> <span>Per-node input/output inspection</span></li>
+                        <li><i data-lucide="check"></i> <span>Live log streaming</span></li>
+                        <li><i data-lucide="check"></i> <span>One-click replay</span></li>
+                    </ul>
+                </div>
+                <div class="showcase-visual glass-panel">
+                    <div class="placeholder-box small">
+                        <i data-lucide="list"></i>
+                        <span>Execution History UI Placeholder</span>
+                    </div>
+                    <!-- <img src="images/execution_history.png" alt="Execution History" onerror="this.style.display='none'"> -->
+                </div>
+            </div>
+
+            <div class="showcase-row reverse">
+                <div class="showcase-text">
+                    <h3>Flexible Node Ecosystem</h3>
+                    <p>From simple HTTP requests to complex JSON transformations using JSONata. Extend functionality
+                        with custom logic nodes or use our library of pre-built connectors.</p>
+                    <ul class="feature-list">
+                        <li><i data-lucide="check"></i> <span>JSONata Transformations</span></li>
+                        <li><i data-lucide="check"></i> <span>Database Sync (SQL)</span></li>
+                        <li><i data-lucide="check"></i> <span>File I/O Streaming</span></li>
+                    </ul>
+                </div>
+                <div class="showcase-visual glass-panel">
+                    <div class="placeholder-box small">
+                        <i data-lucide="layers"></i>
+                        <span>Node Configuration UI Placeholder</span>
+                    </div>
+                    <!-- <img src="images/node_config.png" alt="Node Config" onerror="this.style.display='none'"> -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container text-center">
+            <h2>Ready to conduct your data?</h2>
+            <p>Join the revolution in open-source data orchestration.</p>
+            <div class="cta-buttons">
+                <a href="https://github.com/gpimblott/data-conductor" class="btn btn-large btn-primary">
+                    <i data-lucide="github"></i> Star on GitHub
+                </a>
+                <a href="#" class="btn btn-large btn-outline">Read the Docs</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
     <footer>
-        &copy;G.Pimblott 2026 DataConductor. All rights reserved.
+        <div class="container footer-content">
+            <div class="footer-logo">
+                <span>DataConductor</span>
+                <p>&copy; 2026 DataConductor Project. Open Source (GPLv3).</p>
+            </div>
+            <div class="footer-links">
+                <a href="#">Documentation</a>
+                <a href="#">Governance</a>
+                <a href="#">Community</a>
+            </div>
+        </div>
     </footer>
+
+    <script>
+        lucide.createIcons();
+    </script>
 </body>
 
 </html>

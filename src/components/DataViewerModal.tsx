@@ -17,6 +17,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Download } from 'lucide-react';
 
 interface DataViewerModalProps {
     isOpen: boolean;
@@ -42,16 +43,21 @@ export default function DataViewerModal({ isOpen, onClose, connectionId, fileId,
     }, [isOpen, connectionId, fileId]);
 
     const fetchContent = async () => {
+        if (!fileId) return;
         setIsLoading(true);
         setError(null);
         try {
             const baseUrl = '/api/pipelines';
-            const res = await fetch(`${baseUrl}/${connectionId}/files/${fileId}`);
-            if (!res.ok) throw new Error('Failed to fetch content');
+            const encodedFileId = encodeURIComponent(fileId);
+            const res = await fetch(`${baseUrl}/${connectionId}/files/${encodedFileId}?limit=2000`);
+            if (!res.ok) {
+                const errorText = await res.text();
+                throw new Error(`Failed to fetch content: ${res.status} ${res.statusText} - ${errorText}`);
+            }
             const text = await res.text();
             setContent(text);
-        } catch (err) {
-            setError('Failed to load file content.');
+        } catch (err: any) {
+            setError(err.message || 'Failed to load file content.');
             console.error(err);
         } finally {
             setIsLoading(false);
@@ -126,8 +132,35 @@ export default function DataViewerModal({ isOpen, onClose, connectionId, fileId,
                     padding: '1rem',
                     borderTop: '1px solid #262626',
                     display: 'flex',
-                    justifyContent: 'flex-end'
+                    justifyContent: 'flex-end',
+                    gap: '1rem'
                 }}>
+                    <a
+                        href={`/api/pipelines/${connectionId}/files/${fileId}?download=true`}
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ textDecoration: 'none' }}
+                    >
+                        <button
+                            style={{
+                                padding: '0.5rem 1rem',
+                                background: '#3b82f6',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                fontSize: '0.9rem',
+                                height: '36px' // Match Close button height roughly
+                            }}
+                        >
+                            <Download size={16} />
+                            Download
+                        </button>
+                    </a>
                     <button
                         onClick={onClose}
                         style={{

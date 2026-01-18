@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import fs from 'fs';
+import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,16 +38,44 @@ export async function GET(
         const filePath = output?.filePath || output?.path;
 
         if (!output || !filePath) {
+            console.warn(`File output not found for exec=${executionId}, node=${nodeId}. Outputs keys: ${Object.keys(outputs).join(',')}`);
             return NextResponse.json({ error: 'File output not found' }, { status: 404 });
         }
+
+        const url = new URL(request.url);
+        const limitStr = url.searchParams.get('limit');
+        const downloadStr = url.searchParams.get('download');
+        const limit = limitStr ? parseInt(limitStr) : null;
+        const isDownload = downloadStr === 'true';
 
         if (!fs.existsSync(filePath)) {
             return NextResponse.json({ error: 'File not found on server' }, { status: 404 });
         }
 
-        const content = fs.readFileSync(filePath, 'utf-8');
+        let content;
+        if (limit && !isDownload) {
+            const buffer = Buffer.alloc(limit);
+            const fd = fs.openSync(filePath, 'r');
+            const bytesRead = fs.readSync(fd, buffer, 0, limit, 0);
+            fs.closeSync(fd);
+            content = buffer.toString('utf8', 0, bytesRead);
+            // Append truncated message if file is larger
+            const stats = fs.statSync(filePath);
+            if (stats.size > limit) {
+                content += '\n\n... (truncated view used for performance)';
+            }
+        } else {
+            content = fs.readFileSync(filePath, 'utf-8');
+        }
+
+        const headers: Record<string, string> = { 'Content-Type': 'text/plain' };
+        if (isDownload) {
+            const filename = path.basename(filePath);
+            headers['Content-Disposition'] = `attachment; filename="${filename}"`;
+        }
+
         return new NextResponse(content, {
-            headers: { 'Content-Type': 'text/plain' }
+            headers
         });
 
     } catch (error) {
