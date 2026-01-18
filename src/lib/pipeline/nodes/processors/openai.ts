@@ -43,18 +43,35 @@ export const openaiHandler: NodeHandler = {
                         let payload: any;
 
                         if (isChatApi) {
+                            const messages: any[] = [];
+
+                            // If JSON is expected, add a system prompt to enforce it
+                            if (jsonMode || ctx.config.parseJsonResponse) {
+                                messages.push({
+                                    role: 'system',
+                                    content: 'You are a helpful assistant that outputs ONLY valid JSON. Do not include any markdown formatting (like ```json), preamble, or explanation.'
+                                });
+                            }
+
+                            messages.push({ role: 'user', content: interpolatedPrompt });
+
                             payload = {
                                 model: model,
-                                messages: [{ role: 'user', content: interpolatedPrompt }],
+                                messages: messages,
                                 temperature: Number(temperature),
                                 ...(max_tokens ? { max_tokens: Number(max_tokens) } : {}),
                                 ...(jsonMode ? { response_format: { type: 'json_object' } } : {})
                             };
                         } else {
                             // Legacy/Text Completion API
+                            let finalPrompt = interpolatedPrompt;
+                            if (jsonMode || ctx.config.parseJsonResponse) {
+                                finalPrompt += "\n\nOutput ONLY valid JSON. Do not include markdown or explanations.";
+                            }
+
                             payload = {
                                 model: model,
-                                prompt: interpolatedPrompt,
+                                prompt: finalPrompt,
                                 temperature: Number(temperature),
                                 ...(max_tokens ? { max_tokens: Number(max_tokens) } : {})
                             };
