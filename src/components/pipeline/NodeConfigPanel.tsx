@@ -36,6 +36,7 @@ export default function NodeConfigPanel({ node, onClose, onUpdate }: NodeConfigP
     const isFileDestNode = node.type === 'file_destination';
     const isPostgresNode = node.type === 'postgres_destination';
     const isMysqlNode = node.type === 'mysql_destination';
+    const isOpenAINode = node.type === 'openai';
 
     return (
         <div style={{
@@ -79,6 +80,7 @@ export default function NodeConfigPanel({ node, onClose, onUpdate }: NodeConfigP
             {isRestApiNode && <RestApiConfig node={node} onUpdate={onUpdate} />}
             {isFileDestNode && <FileDestConfig node={node} onUpdate={onUpdate} />}
             {(isPostgresNode || isMysqlNode) && <PostgresConfig node={node} onUpdate={onUpdate} />}
+            {isOpenAINode && <OpenAIConfig node={node} onUpdate={onUpdate} />}
         </div>
     );
 }
@@ -372,6 +374,103 @@ function PostgresConfig({ node, onUpdate }: { node: Node, onUpdate: (id: string,
             >
                 <Plus size={16} /> Add Field Map
             </button>
+        </div>
+    );
+}
+
+
+function OpenAIConfig({ node, onUpdate }: { node: Node, onUpdate: (id: string, data: any) => void }) {
+    return (
+        <div>
+            <h4 style={{ margin: '0 0 1rem 0', color: '#e5e5e5', fontSize: '0.9rem' }}>OpenAI Settings</h4>
+
+            <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', color: '#a3a3a3', marginBottom: '0.25rem', fontSize: '0.8rem' }}>API Endpoint</label>
+                <input
+                    value={node.data.endpoint || ''}
+                    onChange={(e) => onUpdate(node.id, { ...node.data, endpoint: e.target.value })}
+                    placeholder="https://api.openai.com/v1/chat/completions"
+                    style={{ width: '100%', padding: '0.5rem', background: '#262626', border: '1px solid #404040', color: '#fff', borderRadius: '4px' }}
+                />
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', color: '#a3a3a3', marginBottom: '0.25rem', fontSize: '0.8rem' }}>API Key</label>
+                <input
+                    type="password"
+                    value={node.data.apiKey || ''}
+                    onChange={(e) => onUpdate(node.id, { ...node.data, apiKey: e.target.value })}
+                    placeholder="sk-..."
+                    style={{ width: '100%', padding: '0.5rem', background: '#262626', border: '1px solid #404040', color: '#fff', borderRadius: '4px' }}
+                />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
+                <div>
+                    <label style={{ display: 'block', color: '#a3a3a3', marginBottom: '0.25rem', fontSize: '0.8rem' }}>Model</label>
+                    <input
+                        value={node.data.model || ''}
+                        onChange={(e) => onUpdate(node.id, { ...node.data, model: e.target.value })}
+                        placeholder="gpt-4o"
+                        style={{ width: '100%', padding: '0.5rem', background: '#262626', border: '1px solid #404040', color: '#fff', borderRadius: '4px' }}
+                    />
+                </div>
+                <div>
+                    <label style={{ display: 'block', color: '#a3a3a3', marginBottom: '0.25rem', fontSize: '0.8rem' }}>Temp</label>
+                    <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="2"
+                        value={node.data.temperature ?? 0.7}
+                        onChange={(e) => onUpdate(node.id, { ...node.data, temperature: parseFloat(e.target.value) })}
+                        style={{ width: '100%', padding: '0.5rem', background: '#262626', border: '1px solid #404040', color: '#fff', borderRadius: '4px' }}
+                    />
+                </div>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', color: '#a3a3a3', marginBottom: '0.25rem', fontSize: '0.8rem' }}>System/User Prompt</label>
+                <textarea
+                    value={node.data.prompt || ''}
+                    onChange={(e) => onUpdate(node.id, { ...node.data, prompt: e.target.value })}
+                    placeholder="You are a helpful assistant. Process this: {{text}}"
+                    style={{
+                        width: '100%',
+                        minHeight: '120px',
+                        padding: '0.5rem',
+                        background: '#262626',
+                        border: '1px solid #404040',
+                        color: '#fff',
+                        borderRadius: '4px',
+                        fontFamily: 'monospace',
+                        fontSize: '0.9rem'
+                    }}
+                />
+                <p style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: '#737373' }}>
+                    Use <code>{'{{field}}'}</code> to insert values from input JSON.
+                </p>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', color: '#a3a3a3', marginBottom: '0.25rem', fontSize: '0.8rem' }}>Output Field Name</label>
+                <input
+                    value={node.data.outputField || '_ai_response'}
+                    onChange={(e) => onUpdate(node.id, { ...node.data, outputField: e.target.value })}
+                    placeholder="_ai_response"
+                    style={{ width: '100%', padding: '0.5rem', background: '#262626', border: '1px solid #404040', color: '#fff', borderRadius: '4px' }}
+                />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                    type="checkbox"
+                    id="parseJson"
+                    checked={node.data.parseJsonResponse || false}
+                    onChange={(e) => onUpdate(node.id, { ...node.data, parseJsonResponse: e.target.checked })}
+                />
+                <label htmlFor="parseJson" style={{ color: '#e5e5e5', fontSize: '0.9rem' }}>Parse JSON from response</label>
+            </div>
         </div>
     );
 }

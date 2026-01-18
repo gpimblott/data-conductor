@@ -104,6 +104,7 @@ const sourceHandler: NodeHandler = {
 
 import { restApiHandler } from './processors/restApi';
 import { transformJsonHandler } from './processors/transformJson';
+import { openaiHandler } from './processors/openai';
 import { fileOutputHandler } from './destinations/fileOutput';
 import { postgresDestinationHandler } from './destinations/postgres';
 import { mysqlDestinationHandler } from './destinations/mysql';
@@ -120,6 +121,7 @@ export const registry: Record<string, NodeHandler> = {
     'source': sourceHandler,
     'rest_api': restApiHandler,
     'transform_json': transformJsonHandler,
+    'openai': openaiHandler,
     'destination': destinationHandler,
     'file_destination': fileOutputHandler,
     'postgres_destination': postgresDestinationHandler,

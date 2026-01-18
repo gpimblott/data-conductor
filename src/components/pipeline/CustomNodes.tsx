@@ -18,7 +18,7 @@
 
 import React, { memo, useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
-import { Database, Rss, ArrowRight, Settings, X, Globe, FileJson, File as FileIcon } from 'lucide-react';
+import { Database, Rss, ArrowRight, Settings, X, Globe, FileJson, File as FileIcon, Sparkles } from 'lucide-react';
 import ConfirmationModal from '../ConfirmationModal';
 
 const nodeStyle = {
@@ -289,6 +289,49 @@ export const MysqlDestinationNode = memo(({ id, data }: NodeProps) => {
                 </button>
             </div>
             <div style={{ color: '#a3a3a3' }}>MySQL DB</div>
+            {showConfirm && (
+                <ConfirmationModal
+                    isOpen={showConfirm}
+                    title="Delete Node"
+                    message="Are you sure you want to delete this node?"
+                    onConfirm={confirmDelete}
+                    onCancel={() => setShowConfirm(false)}
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                />
+            )}
+        </div>
+    );
+});
+
+export const OpenAINode = memo(({ id, data }: NodeProps) => {
+    const { deleteElements } = useReactFlow();
+    const [showConfirm, setShowConfirm] = useState(false);
+
+    const onDeleteClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setShowConfirm(true);
+    };
+
+    const confirmDelete = () => {
+        deleteElements({ nodes: [{ id }] });
+        setShowConfirm(false);
+    };
+
+    return (
+        <div style={{ ...nodeStyle, borderLeft: '4px solid #8b5cf6' }}>
+            <Handle type="target" position={Position.Left} style={{ background: '#8b5cf6' }} />
+            <div style={headerStyle}>
+                <div style={labelStyle}>
+                    <Sparkles size={14} color="#8b5cf6" />
+                    {data.label}
+                </div>
+                <button style={deleteButtonStyle} onClick={onDeleteClick} title="Delete Node">
+                    <X size={14} />
+                </button>
+            </div>
+            <div style={{ color: '#a3a3a3' }}>OpenAI Processor</div>
+            <Handle type="source" position={Position.Right} style={{ background: '#8b5cf6' }} />
             {showConfirm && (
                 <ConfirmationModal
                     isOpen={showConfirm}

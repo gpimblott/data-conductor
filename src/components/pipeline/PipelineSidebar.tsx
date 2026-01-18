@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { Database, FileText, Filter, Workflow, Globe, FileJson, File as FileIcon, Rss } from 'lucide-react';
+import { Database, FileText, Filter, Workflow, Globe, FileJson, File as FileIcon, Rss, Sparkles } from 'lucide-react';
 
 export default function PipelineSidebar() {
     const onDragStart = (event: React.DragEvent, nodeType: string, label: string, connectionType?: string) => {
@@ -78,6 +78,13 @@ export default function PipelineSidebar() {
                     style={itemStyle}
                 >
                     <FileJson size={16} /> Transform JSON
+                </div>
+                <div
+                    draggable
+                    onDragStart={(event) => onDragStart(event, 'openai', 'OpenAI API')}
+                    style={itemStyle}
+                >
+                    <Sparkles size={16} /> OpenAI API
                 </div>
             </div>
 

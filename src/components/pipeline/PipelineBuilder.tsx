@@ -21,7 +21,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import PipelineSidebar from './PipelineSidebar';
 import StatusBadge from '../StatusBadge';
-import { SourceNode, RestApiNode, TransformJsonNode, DestinationNode, FileDestinationNode, PostgresDestinationNode, MysqlDestinationNode } from './CustomNodes';
+import { SourceNode, RestApiNode, TransformJsonNode, DestinationNode, FileDestinationNode, PostgresDestinationNode, MysqlDestinationNode, OpenAINode } from './CustomNodes';
 import styles from './PipelineBuilder.module.css';
 import { SplitButton } from '@/components/ui/SplitButton';
 import { Dropdown, DropdownItem, DropdownSeparator } from '@/components/ui/Dropdown';
@@ -45,6 +45,7 @@ const nodeTypes = {
     file_destination: FileDestinationNode,
     postgres_destination: PostgresDestinationNode,
     mysql_destination: MysqlDestinationNode,
+    openai: OpenAINode,
 };
 
 const getId = () => `dndnode_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
